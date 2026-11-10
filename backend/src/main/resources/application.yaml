@@ -1,3 +1,26 @@
+server:
+  port: 8081
+
 spring:
   application:
-    name: backend
+    name: sportbooking-backend
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/sportbooking_db}
+      database: ${MONGODB_DATABASE:sportbooking_db}
+      auto-index-creation: true
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 20MB
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    try-it-out-enabled: true
