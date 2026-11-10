@@ -1,17 +1,18 @@
 # SportBooking -- Frontend UI/UX & AI Agent Implementation Specification
 
 > **Mục đích:** Tài liệu giao việc cho AI Agent xây dựng toàn bộ
-> frontend SportBooking bằng ReactJS. Agent phải đọc tài liệu database
-> hiện có trước khi code, tuân thủ schema, tạo dữ liệu mock đầy đủ trong
-> `frontend/mock/`, và triển khai các luồng demo hoạt động được dù
-> backend chưa có.
+> frontend SportBooking bằng ReactJS (Phiên bản 2.0). Agent phải đọc kỹ
+> `Database_Design.md` và `SportBooking_Backend_Functions_API_Security_Guidelines.md`
+> trước khi code, tuân thủ tuyệt đối schema & nghiệp vụ v2.0, tạo dữ liệu
+> mock đầy đủ trong `frontend/mock/`, và triển khai các luồng demo hoạt
+> động được dù backend chưa có.
 >
-> **Database chuẩn:** `sportbooking_db`, MongoDB, 17 Collections chính.
-> Tài liệu schema gốc hiện được lưu với tên
-> `SportBooking_Database_Design.md` (nếu nhóm đổi tên thành
-> `database.md`, hãy sử dụng file đó). Không tự ý đổi tên Collection,
-> thuộc tính, kiểu dữ liệu, trạng thái hoặc quan hệ khi chưa cập nhật
-> tài liệu database.
+> **Database chuẩn (v2.0):** `sportbooking_db`, MongoDB, **16 Collections chính**
+> (đã bổ sung `auth_sessions` và loại bỏ hoàn toàn chức năng khuyến mãi
+> `promotions` / `promotion_usages`). Tài liệu schema gốc là
+> `Database_Design.md` và tài liệu nghiệp vụ/API là
+> `SportBooking_Backend_Functions_API_Security_Guidelines.md`. Không tự ý
+> đổi tên Collection, thuộc tính, kiểu dữ liệu, trạng thái hoặc quan hệ.
 
 ------------------------------------------------------------------------
 
@@ -42,9 +43,9 @@ code đang hoạt động.
 
 ## 1.2. Điều kiện bắt buộc
 
-1.  Đọc và đối chiếu tài liệu database trước khi tạo mock hoặc viết UI.
-2.  Tạo `frontend/mock/` với dữ liệu mẫu tương ứng đầy đủ 17 Collections
-    và đúng các thuộc tính trong database.
+1.  Đọc và đối chiếu `Database_Design.md` và `SportBooking_Backend_Functions_API_Security_Guidelines.md` trước khi tạo mock hoặc viết UI.
+2.  Tạo `frontend/mock/` với dữ liệu mẫu tương ứng đầy đủ **16 Collections**
+    và đúng các thuộc tính trong database v2.0.
 3.  Mọi trang, danh sách, biểu đồ, thẻ thống kê, lịch, chi tiết và form
     demo phải lấy dữ liệu từ mock service, không hardcode dữ liệu rải
     rác trong component.
@@ -74,7 +75,7 @@ code đang hoạt động.
 Thực hiện theo thứ tự:
 
 1.  Kiểm tra repository, framework, package, routing và CSS hiện có.
-2.  Đọc tài liệu database, lập bảng ánh xạ 17 Collections.
+2.  Đọc tài liệu database & backend guidelines, lập bảng ánh xạ 16 Collections.
 3.  Tạo design tokens và hệ thống component dùng chung.
 4.  Tạo mock data và mock services.
 5.  Tạo layout theo vai trò.
@@ -106,12 +107,9 @@ tuyến, hỗ trợ:
 
 Ba khu vực sử dụng chính:
 
--   **Khách truy cập/Customer:** tìm sân, xem lịch trống, đặt sân, thanh
-    toán mô phỏng, đánh giá.
--   **Owner:** quản lý cơ sở, sân, giá, lịch, booking, khuyến mãi và
-    doanh thu.
--   **Admin:** quản lý người dùng, duyệt Owner/cơ sở, kiểm soát booking,
-    thanh toán, khiếu nại và thống kê.
+-   **Khách truy cập/Customer:** tìm sân, xem lịch trống, chọn một hoặc nhiều khung giờ trên cùng một sân (multi-slot), thanh toán tiền cọc 20% (`DEPOSIT_20_PERCENT`) hoặc thanh toán đủ 100% (`FULL_PAYMENT`) trong thời gian giữ chỗ 1 giờ (`HOLD`), thanh toán phần còn lại (`REMAINING`), hủy đơn & hoàn tiền trong vòng 24 giờ kể từ khi tạo đơn, đánh giá, khiếu nại và quản lý phiên đăng nhập (`auth_sessions`).
+-   **Owner:** quản lý cơ sở, sân, mẫu lịch hoạt động hằng ngày (`DAILY`), quy tắc giá (`specificDates` & `daysOfWeek`), lịch chặn sân, booking, đánh giá, khiếu nại và doanh thu của cơ sở mình.
+-   **Admin (phạm vi giới hạn theo v2.0):** chỉ quản lý tài khoản người dùng (`users`), xét duyệt hồ sơ đăng ký Owner (`owner_applications`), quản lý danh mục thể thao (`sports_categories`), kiểm duyệt ẩn/hiện đánh giá (`reviews`) và xử lý khiếu nại (`complaints`). **Admin không có chức năng quản lý cơ sở/sân, không vận hành booking toàn hệ thống, không quản lý thanh toán/doanh thu toàn cục và không có chức năng khuyến mãi.**
 
 ## 2.2. Tính cách thiết kế
 
@@ -354,11 +352,11 @@ Có thể dùng public header nhưng bổ sung:
     -   Tổng quan
     -   Cơ sở của tôi
     -   Quản lý sân
-    -   Lịch hoạt động
+    -   Lịch hoạt động (mẫu DAILY)
     -   Giá sân
+    -   Lịch chặn sân
     -   Đơn đặt sân
     -   Lịch sân
-    -   Khuyến mãi
     -   Đánh giá
     -   Khiếu nại
     -   Doanh thu
@@ -366,20 +364,15 @@ Có thể dùng public header nhưng bổ sung:
 
 ## 4.4. Admin dashboard layout
 
--   Bố cục tương tự Owner nhưng nhận diện rõ khu vực quản trị.
+-   Bố cục tương tự Owner nhưng nhận diện rõ khu vực quản trị và **tuân thủ nghiêm ngặt phạm vi Admin v2.0** (Admin không có quản lý cơ sở/sân, booking, thanh toán, báo cáo doanh thu hay khuyến mãi).
 -   Sidebar có nhóm menu:
-    -   Tổng quan
+    -   Tổng quan (chỉ thống kê người dùng, hồ sơ Owner, đánh giá và khiếu nại)
     -   Người dùng
     -   Hồ sơ Owner
-    -   Cơ sở thể thao
     -   Danh mục thể thao
-    -   Sân thể thao
-    -   Đơn đặt sân
-    -   Thanh toán
-    -   Khuyến mãi
-    -   Đánh giá
+    -   Kiểm duyệt đánh giá
     -   Khiếu nại
-    -   Nhật ký hệ thống (nếu triển khai)
+    -   Cài đặt hiển thị
 -   Có bộ lọc, phân trang, trạng thái, thao tác hàng loạt ở những màn
     hình phù hợp.
 -   Các hành động khóa tài khoản, từ chối hồ sơ, xóa dữ liệu phải có
@@ -434,11 +427,6 @@ hoặc trạng thái.
   PUB-06            `/sports/:code`     Trang theo môn    Hero nhỏ, mô tả
                                         thể thao          môn, bộ lọc, danh
                                                           sách sân phù hợp
-
-  PUB-07            `/promotions`       Khuyến mãi        Banner, danh sách
-                                                          mã, điều kiện,
-                                                          thời gian hiệu
-                                                          lực
 
   PUB-08            `/about`            Giới thiệu        Sứ mệnh, cách
                                                           hoạt động, lợi
@@ -518,9 +506,11 @@ hoặc trạng thái.
   CUS-04            `/account/bookings`                 Danh sách booking Tab theo trạng thái, tìm
                                                                           kiếm, lọc ngày, pagination
 
-  CUS-05            `/account/bookings/:id`             Chi tiết booking  Mã booking, cơ sở, sân, giờ,
-                                                                          giá, payment, timeline, hành
-                                                                          động
+  CUS-05            `/account/bookings/:id`             Chi tiết booking  Mã booking, cơ sở, sân, danh
+                                                                          sách `items` (nhiều slot),
+                                                                          chi tiết cọc 20%/còn lại,
+                                                                          hạn giữ chỗ 1h, hạn hủy 24h,
+                                                                          nút thanh toán phần còn lại
 
   CUS-06            `/account/favorites`                Yêu thích         Tab cơ sở/sân, bỏ yêu thích,
                                                                           mở chi tiết
@@ -533,8 +523,10 @@ hoặc trạng thái.
                                                                           thái, chỉnh sửa nếu chính
                                                                           sách cho phép
 
-  CUS-09            `/account/complaints`               Khiếu nại của tôi Danh sách, trạng thái, tìm
-                                                                          kiếm
+  CUS-09            `/account/complaints`               Khiếu nại của tôi Danh sách, trạng thái
+                                                                          (`OPEN`, `IN_PROGRESS`,
+                                                                          `RESOLVED`, `REJECTED`,
+                                                                          `CLOSED`), tìm kiếm
 
   CUS-10            `/account/complaints/new`           Tạo khiếu nại     Chọn booking/cơ sở, subject,
                                                                           content, ảnh mock
@@ -542,14 +534,18 @@ hoặc trạng thái.
   CUS-11            `/account/complaints/:id`           Chi tiết khiếu    Nội dung, ảnh, phản hồi,
                                                         nại               trạng thái
 
-  CUS-12            `/checkout/:courtId`                Xác nhận đặt sân  Tóm tắt sân, ngày, slot,
-                                                                          giá, mã khuyến mãi, thông
-                                                                          tin người đặt
+  CUS-12            `/checkout/:courtId`                Xác nhận đặt sân  Tóm tắt sân, danh sách
+                                                                          nhiều khung giờ (`items`),
+                                                                          chọn cọc 20%
+                                                                          (`DEPOSIT_20_PERCENT`) hoặc
+                                                                          100% (`FULL_PAYMENT`),
+                                                                          chính sách giữ chỗ 1h &
+                                                                          hủy hoàn tiền 24h
 
   CUS-13            `/payment/:bookingId`               Thanh toán        Chọn
                                                                           CASH/BANK_TRANSFER/ONLINE,
-                                                                          hướng dẫn mock, xác nhận
-                                                                          demo
+                                                                          số tiền cọc 20% hoặc 100%,
+                                                                          đếm ngược 1 giờ giữ chỗ
 
   CUS-14            `/payment-result/:bookingId`        Kết quả thanh     Thành công/thất bại/chờ xử
                                                         toán              lý, xem booking
@@ -560,6 +556,11 @@ hoặc trạng thái.
   CUS-16            `/account/owner-application`        Đăng ký Owner     Business name/address,
                                                                           phone, upload giấy tờ mock,
                                                                           trạng thái hồ sơ
+
+  CUS-17            `/account/sessions`                 Phiên đăng nhập   Danh sách phiên hoạt động từ
+                                                                          `auth_sessions`, thu hồi
+                                                                          từng thiết bị hoặc đăng xuất
+                                                                          tất cả thiết bị khác
   ----------------------------------------------------------------------------------------------------
 
 ## 5.4. Owner -- Chủ sân
@@ -602,17 +603,17 @@ hoặc trạng thái.
 
   OWN-09            `/owner/courts/:id/edit`       Sửa sân            Form cập nhật, preview
 
-  OWN-10            `/owner/operating-hours`       Lịch hoạt động     Chọn cơ sở/sân, cấu
-                                                                      hình 7 ngày, mở/đóng,
-                                                                      giờ, slot duration
+  OWN-10            `/owner/operating-hours`       Lịch hoạt động     Chọn sân, cấu hình mẫu
+                                                                      `DAILY` (`effectiveFrom`,
+                                                                      `effectiveTo`, `timeSlots`)
 
   OWN-11            `/owner/pricing`               Danh sách quy tắc  Chọn sân, lọc trạng
-                                                   giá                thái, ngày áp dụng,
-                                                                      giờ áp dụng, priority
+                                                   giá                thái, `specificDates`,
+                                                                      `daysOfWeek`, giờ, priority
 
-  OWN-12            `/owner/pricing/new`           Tạo quy tắc giá    Tên, sân, ngày, giờ,
-                                                                      giá/slot, hiệu lực,
-                                                                      priority
+  OWN-12            `/owner/pricing/new`           Tạo quy tắc giá    Tên, sân, `specificDates`,
+                                                                      `daysOfWeek`, giờ, giá/slot,
+                                                                      hiệu lực, priority
 
   OWN-13            `/owner/pricing/:id/edit`      Sửa quy tắc giá    Form prefilled, cảnh
                                                                       báo quy tắc trùng
@@ -628,38 +629,28 @@ hoặc trạng thái.
                                                                       thái/ngày/sân, search
                                                                       bookingCode
 
-  OWN-17            `/owner/bookings/:id`          Chi tiết booking   Khách, sân, slot, giá
-                                                                      snapshot, payment,
-                                                                      timeline, xác nhận/từ
-                                                                      chối
+  OWN-17            `/owner/bookings/:id`          Chi tiết booking   Khách, sân, danh sách
+                                                                      `items`, chi tiết cọc 20% /
+                                                                      còn lại, xác nhận/từ chối/
+                                                                      hoàn thành
 
   OWN-18            `/owner/calendar`              Lịch đặt sân       Day/week view, court
                                                                       lanes, slot
                                                                       HOLD/BOOKED/blocked,
                                                                       điều hướng ngày
 
-  OWN-19            `/owner/promotions`            Danh sách khuyến   Search, status, thời
-                                                   mãi                gian, usage count
-
-  OWN-20            `/owner/promotions/new`        Tạo khuyến mãi     Code, name, discount
-                                                                      type/value, min/max,
-                                                                      usage limit, date
-
-  OWN-21            `/owner/promotions/:id/edit`   Sửa khuyến mãi     Form prefilled,
-                                                                      validation
-
   OWN-22            `/owner/reviews`               Quản lý đánh giá   Rating filter, review
-                                                                      list, phản hồi
+                                                                      list, phản hồi (`ownerReply`)
 
   OWN-23            `/owner/complaints`            Khiếu nại cơ sở    Danh sách, trạng thái,
-                                                                      lọc
+                                                                      lọc, phản hồi
 
   OWN-24            `/owner/complaints/:id`        Chi tiết khiếu nại Nội dung, booking,
                                                                       ảnh, phản hồi
 
   OWN-25            `/owner/revenue`               Doanh thu          KPI, biểu đồ theo thời
                                                                       gian, lọc cơ sở/sân,
-                                                                      bảng giao dịch
+                                                                      bảng giao dịch (của Owner)
 
   OWN-26            `/owner/profile`               Hồ sơ Owner        Thông tin tài khoản,
                                                                       hồ sơ kinh doanh,
@@ -673,20 +664,23 @@ hoặc trạng thái.
                                                                       hướng dẫn xử lý
   ------------------------------------------------------------------------------------------
 
-## 5.5. Admin -- Quản trị hệ thống
+## 5.5. Admin -- Quản trị hệ thống (Phạm vi giới hạn theo v2.0)
+
+> **Lưu ý quan trọng (v2.0):** Admin **KHÔNG** có các trang quản lý cơ sở (`/admin/facilities`), quản lý sân (`/admin/courts`), quản lý booking (`/admin/bookings`), quản lý thanh toán (`/admin/payments`), quản lý khuyến mãi (`/admin/promotions`) hay báo cáo doanh thu (`/admin/reports`).
 
   ------------------------------------------------------------------------------------------------
   Mã                Route                             Giao diện         Chi tiết
   ----------------- --------------------------------- ----------------- --------------------------
-  ADM-01            `/admin`                          Dashboard Admin   KPI, chart
-                                                                        booking/revenue, user
-                                                                        growth, pending queue
+  ADM-01            `/admin`                          Dashboard Admin   KPI người dùng, hồ sơ
+                                                                        Owner chờ duyệt, đánh giá
+                                                                        & khiếu nại cần xử lý
 
   ADM-02            `/admin/users`                    Quản lý người     Search, role/status
-                                                      dùng              filter, pagination
+                                                      dùng              filter, pagination, khóa/
+                                                                        mở khóa, thu hồi phiên
 
   ADM-03            `/admin/users/:id`                Chi tiết người    Profile, roles, status,
-                                                      dùng              booking liên quan
+                                                      dùng              lịch sử hoạt động
 
   ADM-04            ---                               Khóa/mở khóa tài  Confirm modal, lý do
                                                       khoản             
@@ -697,51 +691,20 @@ hoặc trạng thái.
   ADM-06            `/admin/owner-applications/:id`   Chi tiết hồ sơ    Thông tin, giấy tờ
                                                       Owner             preview, approve/reject
 
-  ADM-07            `/admin/facilities`               Quản lý cơ sở     Search, status, owner, địa
-                                                                        điểm
-
-  ADM-08            `/admin/facilities/:id`           Chi tiết cơ sở    Thông tin, sân, Owner,
-                                                                        lịch sử trạng thái
-
-  ADM-09            ---                               Duyệt/từ chối cơ  Confirm modal, lý do từ
-                                                      sở                chối
-
-  ADM-10            `/admin/courts`                   Quản lý sân       Search, filter
-                                                                        facility/category/status
-
   ADM-11            `/admin/categories`               Danh mục thể thao CRUD danh mục, icon,
                                                                         status
 
-  ADM-12            `/admin/bookings`                 Quản lý booking   Search bookingCode, filter
-                                                                        status/date/payment
-
-  ADM-13            `/admin/bookings/:id`             Chi tiết booking  Customer, Owner, facility,
-                                                                        court, slot, payment
-
-  ADM-14            `/admin/payments`                 Quản lý thanh     Transaction list, filter
-                                                      toán              method/status/date
-
-  ADM-15            `/admin/payments/:id`             Chi tiết thanh    Amount, method,
-                                                      toán              transactionCode, booking
-
-  ADM-16            `/admin/promotions`               Quản lý khuyến    Danh sách, filter, trạng
-                                                      mãi               thái
-
   ADM-17            `/admin/reviews`                  Kiểm duyệt đánh   Search, rating, status,
-                                                      giá               ẩn/hiện
+                                                      giá               ẩn (`HIDDEN`) / hiện (`VISIBLE`)
 
-  ADM-18            `/admin/complaints`               Quản lý khiếu nại Queue, priority
-                                                                        presentation, status
+  ADM-18            `/admin/complaints`               Quản lý khiếu nại Queue (`OPEN`, `IN_PROGRESS`,
+                                                                        `RESOLVED`, `REJECTED`, `CLOSED`)
 
   ADM-19            `/admin/complaints/:id`           Chi tiết khiếu    Nội dung, ảnh, booking,
-                                                      nại               phản hồi, xử lý
+                                                      nại               phản hồi, cập nhật trạng thái
 
-  ADM-20            `/admin/reports`                  Báo cáo hệ thống  Booking, revenue, users,
-                                                                        facilities, categories
-
-  ADM-21            `/admin/settings`                 Cài đặt hiển thị  Cấu hình demo UI, không
-                                                                        giả lập cấu hình backend
-                                                                        chưa có
+  ADM-21            `/admin/settings`                 Cài đặt hiển thị  Cấu hình demo UI, reset
+                                                                        mock data
 
   ADM-22            ---                               Empty/error state Không có dữ liệu, lỗi tải
                                                       Admin             dữ liệu
@@ -760,21 +723,18 @@ nhưng phải thiết kế đầy đủ:
 -   Search suggestions dropdown.
 -   Filter drawer/bottom sheet.
 -   Date picker/calendar.
--   Time-slot picker.
--   Price breakdown popover.
--   Promotion code input và kết quả hợp lệ/không hợp lệ.
+-   Time-slot picker (hỗ trợ chọn nhiều slot trên cùng một sân).
+-   Price breakdown popover (tổng tiền gốc, tiền cọc 20%, số tiền còn lại).
 -   Confirm booking modal.
--   Cancel booking modal, nhập lý do nếu cần.
+-   Cancel booking modal, nhập lý do hủy (kiểm tra điều kiện 24 giờ).
 -   Reject booking modal.
 -   Approve/reject Owner application modal.
--   Approve/reject Facility modal.
 -   Ban/unban user modal.
 -   Delete/deactivate confirmation modal.
 -   Add/edit facility modal nếu dùng modal thay route.
 -   Add/edit court modal.
--   Add/edit price rule modal.
+-   Add/edit price rule modal (hỗ trợ `specificDates` & `daysOfWeek`).
 -   Add blocked slot modal.
--   Add/edit promotion modal.
 -   Review form modal hoặc page.
 -   Complaint response form.
 -   Image uploader, preview, remove image.
@@ -861,27 +821,36 @@ Bộ lọc phải hoạt động thật trên mock data, không chỉ là UI tra
 -   Gallery ảnh lớn + thumbnail.
 -   Tên sân, cơ sở, địa chỉ, rating.
 -   Thông tin loại sân và `attributes`.
--   Giá/khung giờ.
+-   Giá/khung giờ (áp dụng `specificDates` ưu tiên hơn `daysOfWeek`).
 -   Lịch chọn ngày.
--   Slot picker theo thời gian; slot đã đặt, HOLD, bị chặn, còn trống
-    phải phân biệt rõ.
--   Panel tóm tắt booking sticky trên desktop nếu phù hợp.
+-   Slot picker theo thời gian (sinh từ mẫu `DAILY` của `operating_hours`); cho phép **chọn nhiều khung giờ (multi-slot)** trên cùng một sân; slot đã `BOOKED`, `HOLD` còn hiệu lực (1 giờ), hoặc bị `BLOCKED` phải phân biệt rõ.
+-   Panel tóm tắt booking sticky trên desktop: hiển thị danh sách slot đã chọn, tổng thời lượng, tổng tiền gốc (`originalAmount`) và mức cọc 20% (`depositRequired`).
 -   Reviews và owner reply.
 -   Sân/cơ sở liên quan.
 
 Không cho chọn slot đã BOOKED, HOLD còn hiệu lực hoặc bị blocked.
 
-## 6.5. Checkout và thanh toán
+## 6.5. Checkout và thanh toán (Chuẩn v2.0)
 
-Checkout gồm: - Thông tin sân/cơ sở. - Ngày, giờ, thời lượng. - Thông
-tin khách đặt. - Mã khuyến mãi. - Bảng tính giá: giá gốc, giảm giá, tổng
-tiền. - Điều khoản/hủy đặt. - CTA xác nhận.
+Checkout gồm:
+-   Thông tin sân/cơ sở.
+-   Danh sách các khung giờ đã chọn (`items`: ngày, giờ bắt đầu/kết thúc, thời lượng, đơn giá).
+-   Thông tin khách đặt & ghi chú.
+-   Tùy chọn thanh toán (`paymentOption`):
+    -   `DEPOSIT_20_PERCENT`: Đặt cọc 20% tổng giá trị đơn để giữ sân, 80% còn lại thanh toán sau.
+    -   `FULL_PAYMENT`: Thanh toán đủ 100% giá trị đơn ngay.
+-   Bảng tính giá (`priceDetails`): `originalAmount`, `depositRequired` (20%), số tiền thanh toán ngay, `remainingAmount`. (Không có mã khuyến mãi).
+-   Hiển thị rõ 2 chính sách bắt buộc:
+    -   **Giữ chỗ 1 giờ (`holdExpiresAt`):** Sau khi tạo đơn, các slot được giữ `HOLD` trong 1 giờ. Nếu không hoàn tất thanh toán tối thiểu 20% cọc trong 1 giờ, đơn chuyển sang `EXPIRED` và giải phóng slot.
+    -   **Hủy & hoàn tiền trong 24 giờ (`cancellationDeadline`):** Khách được phép hủy và hoàn lại số tiền đã thanh toán trong vòng 24 giờ kể từ `bookings.createdAt`. Quá 24 giờ không được hủy và không hoàn cọc/tiền đã trả.
+-   CTA xác nhận đặt sân.
 
-Payment: - Phương thức CASH, BANK_TRANSFER, ONLINE. - Đây là thanh toán
-demo, không tích hợp cổng thanh toán thật. - Có trạng thái
-pending/success/failed để demo. - Không thu thập dữ liệu thẻ ngân hàng
-thật. - Sau khi hoàn tất, cập nhật mock booking/payment và điều hướng
-trang kết quả.
+Payment:
+-   Phương thức `CASH`, `BANK_TRANSFER`, `ONLINE`; loại giao dịch `paymentType`: `DEPOSIT`, `FULL`, `REMAINING`, `REFUND`.
+-   Đây là thanh toán demo, không tích hợp cổng thanh toán thật.
+-   Có trạng thái `PENDING` / `PAID` / `FAILED` để demo.
+-   Không thu thập dữ liệu thẻ ngân hàng thật.
+-   Sau khi hoàn tất, cập nhật mock booking (`CONFIRMED`, `DEPOSIT_PAID` hoặc `PAID`), chuyển `booking_slots` từ `HOLD` sang `BOOKED`, và điều hướng trang kết quả.
 
 ## 6.6. Dashboard Owner/Admin
 
@@ -984,7 +953,6 @@ frontend/
 │   │   ├── payments/
 │   │   ├── reviews/
 │   │   ├── favorites/
-│   │   ├── promotions/
 │   │   ├── notifications/
 │   │   └── complaints/
 │   │
@@ -1147,7 +1115,7 @@ Backend chưa có, do đó frontend phải có mock database để chạy độc
 
 Mock phải:
 
--   Phản ánh đúng 17 Collections trong tài liệu database.
+-   Phản ánh đúng **16 Collections** trong `Database_Design.md` (v2.0).
 -   Đúng tên thuộc tính, kiểu dữ liệu, enum và quan hệ ObjectId.
 -   Có đủ dữ liệu để mọi trang đều hiển thị phong phú.
 -   Có dữ liệu nhiều trạng thái để test filter và dashboard.
@@ -1161,6 +1129,7 @@ Mock phải:
 frontend/mock/
 ├── data/
 │   ├── users.js
+│   ├── authSessions.js
 │   ├── ownerApplications.js
 │   ├── sportsCategories.js
 │   ├── facilities.js
@@ -1173,8 +1142,6 @@ frontend/mock/
 │   ├── payments.js
 │   ├── reviews.js
 │   ├── favorites.js
-│   ├── promotions.js
-│   ├── promotionUsages.js
 │   ├── notifications.js
 │   └── complaints.js
 │
@@ -1188,12 +1155,13 @@ frontend/mock/
 │
 ├── services/
 │   ├── userMockService.js
+│   ├── authSessionMockService.js
 │   ├── facilityMockService.js
 │   ├── courtMockService.js
 │   ├── bookingMockService.js
 │   ├── paymentMockService.js
 │   ├── reviewMockService.js
-│   ├── promotionMockService.js
+│   ├── favoriteMockService.js
 │   ├── notificationMockService.js
 │   └── complaintMockService.js
 │
@@ -1206,8 +1174,8 @@ frontend/mock/
 └── README.md
 ```
 
-Có thể gộp service theo feature nếu hợp lý, nhưng **17 file dữ liệu theo
-Collection phải có** để dễ đối chiếu database.
+Có thể gộp service theo feature nếu hợp lý, nhưng **16 file dữ liệu theo
+Collection phải có** để dễ đối chiếu database v2.0.
 
 ## 8.3. Quy tắc dữ liệu mock
 
@@ -1252,7 +1220,7 @@ export const users = [
 nên so sánh tài khoản demo theo cấu hình riêng, không dùng chuỗi hash
 giả như một hash BCrypt thực.
 
-### B. Quy mô dữ liệu tối thiểu
+### B. Quy mô dữ liệu tối thiểu (16 Collections chuẩn v2.0)
 
 Tạo đủ dữ liệu để mọi giao diện có nội dung và có thể lọc:
 
@@ -1262,63 +1230,65 @@ Tạo đủ dữ liệu để mọi giao diện có nội dung và có thể l�
   `users`                                          12 Customer, Owner, Admin;
                                                       active/inactive/banned
 
+  `auth_sessions`                                   4 Phiên đăng nhập thiết bị
+                                                      cho Customer, Owner, Admin
+
   `owner_applications`                              5 PENDING, APPROVED,
                                                       REJECTED
 
   `sports_categories`                               4 Football, Badminton,
                                                       Tennis, Pickleball
 
-  `facilities`                                      8 Nhiều Owner, địa điểm,
-                                                      status
+  `facilities`                                      8 Nhiều Owner, địa điểm
+                                                      GeoJSON Point, status
 
   `courts`                                         20 Đủ 4 môn, nhiều cơ sở và
                                                       trạng thái
 
-  `operating_hours`                               140 Có lịch 7 ngày cho các
-                                                      sân
+  `operating_hours`                                20 1 mẫu `DAILY` (`timeSlots`)
+                                                      cho mỗi sân (unique `courtId`)
 
   `price_rules`                                    30 Ngày thường, cuối tuần,
-                                                      giờ cao điểm
+                                                      giờ cao điểm, `specificDates`
 
   `blocked_slots`                                  10 Bảo trì/chặn lịch
 
-  `bookings`                                       30 Đủ trạng thái booking và
-                                                      payment
+  `bookings`                                       30 Đa khung giờ (`items`),
+                                                      cọc 20% / 100%, đủ trạng thái
 
-  `booking_slots`                          40 trở lên HOLD, BOOKED; tham chiếu
-                                                      booking hợp lệ
+  `booking_slots`                          40 trở lên HOLD (1 giờ), BOOKED,
+                                                      RELEASED; tham chiếu hợp lệ
 
-  `payments`                                       35 PENDING, PAID, FAILED,
-                                                      REFUNDED
+  `payments`                                       35 DEPOSIT, FULL, REMAINING,
+                                                      REFUND; PENDING/PAID/FAILED/REFUNDED
 
   `reviews`                                        12 Rating 1--5, có/không
-                                                      ownerReply
+                                                      ownerReply, VISIBLE/HIDDEN
 
   `favorites`                                      15 Favorite facility và
                                                       court
 
-  `promotions`                                      8 Active, inactive,
-                                                      expired
+  `notifications`                                  25 Read/unread, type BOOKING,
+                                                      PAYMENT, REFUND, OWNER,
+                                                      COMPLAINT, SYSTEM
 
-  `promotion_usages`                               10 Liên kết promotion,
-                                                      user, booking
-
-  `notifications`                                  25 Read/unread, nhiều type
-
-  `complaints`                                      6 PENDING, PROCESSING,
-                                                      RESOLVED, REJECTED
+  `complaints`                                      6 OPEN, IN_PROGRESS,
+                                                      RESOLVED, REJECTED, CLOSED
   ----------------------------------------------------------------------------
 
 Đây là số lượng tối thiểu khuyến nghị, có thể tăng khi cần demo nhưng
 không tạo dữ liệu vô nghĩa.
 
-### C. Đúng schema database
+### C. Đúng schema database (v2.0)
 
-Mock phải tuân thủ chính xác các trường trong tài liệu database:
+Mock phải tuân thủ chính xác 16 Collections trong `Database_Design.md` (v2.0):
 
 -   `users`: `_id`, `fullName`, `email`, `password`, `phone`, `avatar`,
     `address`, `roles`, `ownerStatus`, `status`, `isEmailVerified`,
     `createdAt`, `updatedAt`.
+-   `auth_sessions`: `_id`, `userId`, `sessionId`, `familyId`,
+    `refreshTokenHash`, `previousTokenHash`, `deviceName`, `userAgent`,
+    `ipAddress`, `expiresAt`, `lastUsedAt`, `revokedAt`, `createdAt`.
 -   `owner_applications`: `_id`, `userId`, `businessName`,
     `businessAddress`, `contactPhone`, `documents`, `status`,
     `reviewedBy`, `reviewedAt`, `rejectionReason`, `createdAt`,
@@ -1326,41 +1296,51 @@ Mock phải tuân thủ chính xác các trường trong tài liệu database:
 -   `sports_categories`: `_id`, `name`, `code`, `description`, `icon`,
     `status`, `createdAt`, `updatedAt`.
 -   `facilities`: `_id`, `ownerId`, `name`, `description`, `address`,
-    `location`, `images`, `amenities`, `openingHours`, `status`,
-    `createdAt`, `updatedAt`.
+    `location` (`{ type: "Point", coordinates: [longitude, latitude] }`),
+    `images`, `amenities`, `status`, `createdAt`, `updatedAt` (không có
+    `openingHours`; giờ hoạt động cấu hình ở từng sân qua `operating_hours`).
 -   `courts`: `_id`, `facilityId`, `categoryId`, `name`, `description`,
     `attributes`, `images`, `capacity`, `status`, `createdAt`,
     `updatedAt`.
--   `operating_hours`: `_id`, `courtId`, `dayOfWeek`, `isOpen`,
-    `openTime`, `closeTime`, `slotDuration`, `createdAt`, `updatedAt`.
--   `price_rules`: `_id`, `courtId`, `name`, `daysOfWeek`, `startTime`,
-    `endTime`, `pricePerSlot`, `validFrom`, `validTo`, `priority`,
-    `status`, `createdAt`, `updatedAt`.
+-   `operating_hours`: `_id`, `courtId` (unique), `repeatMode` (`DAILY`),
+    `effectiveFrom`, `effectiveTo`, `timeSlots`
+    (`[{ startTime, endTime }]`), `createdAt`, `updatedAt`.
+-   `price_rules`: `_id`, `courtId`, `name`, `specificDates`,
+    `daysOfWeek`, `startTime`, `endTime`, `pricePerSlot`, `validFrom`,
+    `validTo`, `priority`, `status`, `createdAt`, `updatedAt`
+    (`specificDates` có độ ưu tiên cao hơn `daysOfWeek`).
 -   `blocked_slots`: `_id`, `courtId`, `startAt`, `endAt`, `reason`,
     `createdBy`, `createdAt`.
 -   `bookings`: `_id`, `bookingCode`, `customerId`, `facilityId`,
-    `courtId`, `bookingDate`, `startAt`, `endAt`, `duration`,
-    `priceDetails`, `promotionId`, `status`, `paymentStatus`, `note`,
+    `courtId`, `items`
+    (`[{ bookingDate, startAt, endAt, durationMinutes, unitPrice, amount }]`),
+    `totalDurationMinutes`, `priceDetails`
+    (`{ originalAmount, depositRequired, paidAmount, remainingAmount, currency }`),
+    `paymentOption` (`DEPOSIT_20_PERCENT` | `FULL_PAYMENT`), `status`
+    (`PENDING_PAYMENT`, `CONFIRMED`, `EXPIRED`, `CANCELLED`, `COMPLETED`),
+    `paymentStatus` (`UNPAID`, `DEPOSIT_PAID`, `PAID`, `REFUND_PENDING`,
+    `PARTIALLY_REFUNDED`, `REFUNDED`, `PAYMENT_FAILED`), `holdExpiresAt`,
+    `cancellationDeadline`, `cancelledAt`, `cancelReason`, `note`,
     `createdAt`, `updatedAt`.
 -   `booking_slots`: `_id`, `courtId`, `bookingId`, `slotDate`,
-    `startAt`, `endAt`, `status`, `expiresAt`, `createdAt`.
--   `payments`: `_id`, `bookingId`, `customerId`, `amount`, `method`,
-    `transactionCode`, `status`, `paidAt`, `refundedAt`, `createdAt`,
-    `updatedAt`.
+    `startAt`, `endAt`, `status` (`HOLD`, `BOOKED`, `RELEASED`),
+    `expiresAt`, `createdAt`, `updatedAt`.
+-   `payments`: `_id`, `bookingId`, `customerId`, `paymentType`
+    (`DEPOSIT`, `FULL`, `REMAINING`, `REFUND`), `amount`, `currency`,
+    `method` (`CASH`, `BANK_TRANSFER`, `ONLINE`), `provider`,
+    `transactionCode`, `providerEventId`, `status` (`PENDING`, `PAID`,
+    `FAILED`, `REFUND_PENDING`, `REFUNDED`, `PARTIALLY_REFUNDED`),
+    `paidAt`, `refundedAt`, `failureReason`, `createdAt`, `updatedAt`.
 -   `reviews`: `_id`, `bookingId`, `customerId`, `facilityId`,
-    `courtId`, `rating`, `content`, `images`, `ownerReply`, `status`,
-    `createdAt`, `updatedAt`.
+    `courtId`, `rating`, `content`, `images`, `ownerReply`, `status`
+    (`VISIBLE`, `HIDDEN`, `PENDING_REVIEW`), `createdAt`, `updatedAt`.
 -   `favorites`: `_id`, `userId`, `targetType`, `targetId`, `createdAt`.
--   `promotions`: `_id`, `facilityId`, `ownerId`, `code`, `name`,
-    `discountType`, `discountValue`, `minOrderAmount`, `maxDiscount`,
-    `usageLimit`, `usedCount`, `startDate`, `endDate`, `status`,
-    `createdAt`, `updatedAt`.
--   `promotion_usages`: `_id`, `promotionId`, `userId`, `bookingId`,
-    `discountAmount`, `usedAt`.
--   `notifications`: `_id`, `userId`, `title`, `message`, `type`,
+-   `notifications`: `_id`, `userId`, `title`, `message`, `type`
+    (`BOOKING`, `PAYMENT`, `REFUND`, `OWNER`, `COMPLAINT`, `SYSTEM`),
     `referenceId`, `isRead`, `createdAt`.
 -   `complaints`: `_id`, `userId`, `bookingId`, `facilityId`, `subject`,
-    `content`, `images`, `response`, `status`, `createdAt`, `updatedAt`.
+    `content`, `images`, `response`, `status` (`OPEN`, `IN_PROGRESS`,
+    `RESOLVED`, `REJECTED`, `CLOSED`), `createdAt`, `updatedAt`.
 
 Không thêm trường cấp cao nhất không có trong schema. Trường con trong
 `Object`/`Array<Object>` phải theo tài liệu database.
@@ -1369,6 +1349,7 @@ Không thêm trường cấp cao nhất không có trong schema. Trường con t
 
 Ví dụ:
 
+-   Mỗi `auth_sessions.userId` phải tồn tại trong `users`.
 -   Mỗi `facilities.ownerId` phải tồn tại trong `users`.
 -   Mỗi `courts.facilityId` phải tồn tại trong `facilities`.
 -   Mỗi `courts.categoryId` phải tồn tại trong `sports_categories`.
@@ -1378,7 +1359,6 @@ Ví dụ:
 -   `booking_slots.bookingId` phải tồn tại trong `bookings`.
 -   `payments.bookingId` phải tồn tại trong `bookings`.
 -   `reviews.bookingId` phải tồn tại và booking có status `COMPLETED`.
--   `promotion_usages` phải trỏ đến promotion, user, booking có thật.
 -   `favorites.targetId` phải trỏ đúng Collection theo `targetType`.
 -   `notifications.userId` phải tồn tại.
 -   `complaints.userId` phải tồn tại; booking/facility có thể null theo
@@ -1391,11 +1371,10 @@ Ví dụ:
 -   Có đủ 4 loại sân.
 -   Giá hợp lý, thống nhất VND.
 -   Có nhiều ngày đặt khác nhau: quá khứ, hôm nay, tương lai.
--   Có booking ở tất cả trạng thái.
--   Có các khung giờ còn trống, đã đặt, HOLD và blocked.
+-   Có booking ở tất cả trạng thái (`PENDING_PAYMENT`, `CONFIRMED`, `COMPLETED`, `CANCELLED`, `EXPIRED`).
+-   Có các khung giờ còn trống, đã đặt (`BOOKED`), đang giữ chỗ 1 giờ (`HOLD`) và bị chặn (`BLOCKED`).
 -   Có review nhiều mức sao.
--   Có promotion phần trăm và giảm tiền cố định.
--   Có complaint đang xử lý và đã giải quyết.
+-   Có complaint ở các trạng thái `OPEN`, `IN_PROGRESS`, `RESOLVED`, `REJECTED`, `CLOSED`.
 -   Dữ liệu phải đủ để biểu đồ theo ngày/tháng có nhiều điểm.
 -   Không dùng toàn bộ cùng một tên, cùng một giá hoặc cùng một trạng
     thái.
@@ -1452,45 +1431,52 @@ Các nghiệp vụ mock tối thiểu:
   Users                               Xem, tìm, lọc, sửa thông tin demo,
                                       khóa/mở khóa
 
+  Auth sessions                       Xem danh sách phiên hoạt động của
+                                      tài khoản, thu hồi từng phiên hoặc
+                                      thu hồi tất cả phiên khác
+
   Owner applications                  Xem hồ sơ, approve, reject, ghi lý
                                       do
 
   Categories                          Thêm, sửa, bật/tắt
 
   Facilities                          Tạo, sửa, xem, đổi trạng thái demo
+                                      (của Owner)
 
   Courts                              Tạo, sửa, xem, đổi trạng thái
 
-  Operating hours                     Xem và cập nhật lịch 7 ngày
+  Operating hours                     Xem và cập nhật mẫu lịch `DAILY`
+                                      (`timeSlots`, `effectiveFrom`,
+                                      `effectiveTo`)
 
-  Price rules                         Tạo, sửa, bật/tắt, kiểm tra rule
-                                      trùng
+  Price rules                         Tạo, sửa, bật/tắt, hỗ trợ
+                                      `specificDates` và `daysOfWeek`
 
   Blocked slots                       Tạo, xem, gỡ lịch chặn
 
-  Bookings                            Tạo, xem, xác nhận, từ chối, hủy,
-                                      hoàn tất demo
+  Bookings                            Tạo đơn đa slot (`items`), cọc 20%
+                                      hoặc 100%, giữ chỗ 1 giờ, hủy hoàn
+                                      tiền trong 24 giờ, hoàn tất demo
 
-  Booking slots                       Giữ slot, xác nhận slot, giải phóng
-                                      slot
+  Booking slots                       Giữ slot (`HOLD` 1 giờ), xác nhận
+                                      slot (`BOOKED`), giải phóng slot
+                                      (`RELEASED`)
 
-  Payments                            Tạo giao dịch demo, chuyển trạng
-                                      thái thành công/thất bại/hoàn tiền
+  Payments                            Tạo giao dịch `DEPOSIT` / `FULL` /
+                                      `REMAINING` / `REFUND`, chuyển
+                                      trạng thái thành công/thất bại/hoàn
+                                      tiền
 
   Reviews                             Tạo review, Owner reply, Admin
-                                      ẩn/hiện
+                                      ẩn/hiện (`VISIBLE` / `HIDDEN`)
 
   Favorites                           Thêm/bỏ yêu thích facility/court
-
-  Promotions                          Tạo, sửa, bật/tắt, kiểm tra hiệu
-                                      lực
-
-  Promotion usages                    Ghi lịch sử khi áp dụng mã
 
   Notifications                       Tạo, đọc, đánh dấu tất cả đã đọc
 
   Complaints                          Tạo, xử lý, phản hồi, đổi trạng
-                                      thái
+                                      thái (`OPEN`, `IN_PROGRESS`,
+                                      `RESOLVED`, `REJECTED`, `CLOSED`)
   -----------------------------------------------------------------------
 
 ## 9.3. Persistence
@@ -1507,44 +1493,42 @@ Các nghiệp vụ mock tối thiểu:
 
 ## 9.4. Các luồng demo end-to-end bắt buộc
 
-### Flow A -- Khách đặt sân
+### Flow A -- Khách đặt sân đa khung giờ & Đặt cọc 20% / Thanh toán 100%
 
 1.  Mở trang chủ.
 2.  Chọn môn thể thao, ngày, giờ, địa điểm.
 3.  Xem danh sách kết quả.
 4.  Mở chi tiết sân.
-5.  Chọn slot còn trống.
-6.  Chọn mã khuyến mãi (nếu có).
-7.  Xem price breakdown.
+5.  Chọn **một hoặc nhiều khung giờ (multi-slot)** còn trống trên cùng một sân.
+6.  Xem tóm tắt tổng tiền gốc (`originalAmount`) và mức cọc 20% (`depositRequired`), chuyển sang trang Checkout.
+7.  Chọn hình thức thanh toán: `DEPOSIT_20_PERCENT` (cọc 20%) hoặc `FULL_PAYMENT` (100%).
 8.  Xác nhận booking.
-9.  Mock service kiểm tra slot không bị BOOKED/HOLD còn hạn/blocked.
-10. Tạo `bookings`, `booking_slots`, `payments` tương ứng.
+9.  Mock service kiểm tra các slot không bị `BOOKED`, `HOLD` còn hạn (1 giờ) hoặc `BLOCKED`.
+10. Tạo `bookings` (`status = PENDING_PAYMENT`, `holdExpiresAt = createdAt + 1h`, `cancellationDeadline = createdAt + 24h`), các bản ghi `booking_slots` (`status = HOLD`), và `payments` (`paymentType = DEPOSIT` hoặc `FULL`).
 11. Chuyển đến trang thanh toán.
-12. Chọn phương thức và mô phỏng thành công hoặc thất bại.
-13. Cập nhật payment/booking state phù hợp.
-14. Hiển thị kết quả và booking trong lịch sử khách hàng.
+12. Chọn phương thức và mô phỏng thanh toán thành công hoặc thất bại.
+13. Khi thành công: cập nhật `bookings.status = CONFIRMED`, `paymentStatus = DEPOSIT_PAID` (nếu cọc 20%) hoặc `PAID` (nếu trả 100%), chuyển các `booking_slots` sang `BOOKED`.
+14. Hiển thị kết quả và booking trong lịch sử khách hàng (cho phép thanh toán tiếp 80% `REMAINING` nếu mới cọc 20%).
 15. Owner nhìn thấy booking mới trong dashboard/lịch.
 
 ### Flow B -- Owner xử lý booking
 
 1.  Đăng nhập bằng tài khoản Owner demo đã duyệt.
 2.  Xem dashboard có booking mới.
-3.  Mở chi tiết booking.
-4.  Xác nhận hoặc từ chối.
-5.  Nếu từ chối/hủy, giải phóng slot liên quan.
+3.  Mở chi tiết booking (xem danh sách `items`, tiền đã cọc và số tiền còn phải thu).
+4.  Xác nhận hoàn thành buổi tập (`COMPLETED`) hoặc xử lý hủy.
+5.  Nếu từ chối/hủy, chuyển `booking_slots` sang `RELEASED`.
 6.  Cập nhật thông báo cho Customer.
 7.  Customer nhìn thấy trạng thái mới trong lịch sử.
 
 ### Flow C -- Owner quản lý cơ sở và sân
 
-1.  Tạo Facility.
-2.  Facility mới có status phù hợp theo quy trình duyệt.
-3.  Admin duyệt Facility.
-4.  Owner thêm Court.
-5.  Cấu hình operating hours.
-6.  Tạo price rules.
-7.  Tạo blocked slots.
-8.  Sân xuất hiện ở trang tìm kiếm khi đủ điều kiện hiển thị.
+1.  Tạo Facility (với tọa độ GeoJSON Point `[longitude, latitude]`).
+2.  Owner thêm Court thuộc Facility.
+3.  Cấu hình mẫu lịch hoạt động hằng ngày (`DAILY`: `effectiveFrom`, `effectiveTo`, `timeSlots`).
+4.  Tạo price rules (hỗ trợ `specificDates` ưu tiên cao hơn `daysOfWeek`).
+5.  Tạo blocked slots.
+6.  Sân xuất hiện ở trang tìm kiếm với các khung giờ và giá đúng theo cấu hình.
 
 ### Flow D -- Admin duyệt Owner
 
@@ -1557,44 +1541,39 @@ Các nghiệp vụ mock tối thiểu:
 6.  Nếu reject, lưu `rejectionReason`.
 7.  Customer thấy kết quả trong hồ sơ.
 
-### Flow E -- Đánh giá
+### Flow E -- Đánh giá & Kiểm duyệt
 
 1.  Chỉ booking `COMPLETED` mới có nút đánh giá.
-2.  Customer gửi rating và content.
-3.  Tạo `reviews`.
-4.  Owner xem review và gửi `ownerReply`.
-5.  Review xuất hiện ở trang chi tiết cơ sở/sân nếu status cho phép.
+2.  Customer gửi rating và content -> tạo `reviews`.
+3.  Owner xem review và gửi `ownerReply`.
+4.  Admin có thể kiểm duyệt ẩn (`HIDDEN`) hoặc khôi phục hiển thị (`VISIBLE`).
 
-### Flow F -- Khuyến mãi
+### Flow F -- Chính sách hủy trong 24 giờ & Quản lý phiên đăng nhập (`auth_sessions`)
 
-1.  Owner tạo promotion.
-2.  Customer nhập code ở checkout.
-3.  Mock service kiểm tra status, thời hạn, mức đơn tối thiểu, usage
-    limit.
-4.  Tính discount theo `PERCENTAGE` hoặc `FIXED_AMOUNT`.
-5.  Tạo booking với snapshot giá.
-6.  Tạo `promotion_usages`, cập nhật `usedCount`.
-7.  Chặn áp dụng vượt giới hạn hoặc dùng sai cơ sở.
+1.  Customer mở chi tiết một booking đã đặt cọc hoặc thanh toán.
+2.  Nếu thời điểm hiện tại `<= cancellationDeadline` (trong vòng 24 giờ từ `createdAt`), hệ thống cho phép hủy đơn, giải phóng `booking_slots` (`RELEASED`), chuyển `paymentStatus = REFUNDED` và tạo bản ghi hoàn tiền.
+3.  Nếu thời điểm hiện tại `> cancellationDeadline` (quá 24 giờ từ `createdAt`), hệ thống chặn hủy và hiển thị thông báo `CANCELLATION_WINDOW_EXPIRED` (không hoàn cọc/tiền đã thanh toán).
+4.  Customer mở `/account/sessions` để xem các phiên đăng nhập (`auth_sessions`) và thu hồi phiên trên thiết bị khác.
 
 ### Flow G -- Khiếu nại
 
-1.  Customer tạo complaint có thể liên kết booking/facility.
+1.  Customer tạo complaint (`status = OPEN`) có thể liên kết booking/facility.
 2.  Complaint xuất hiện trong khu vực Owner/Admin phù hợp.
-3.  Người xử lý gửi phản hồi.
-4.  Cập nhật status.
-5.  Customer xem kết quả.
+3.  Người xử lý cập nhật trạng thái (`IN_PROGRESS`, `RESOLVED`, `REJECTED`, `CLOSED`) và gửi phản hồi.
+4.  Customer xem kết quả.
 
-## 9.5. Quy tắc xử lý booking mock
+## 9.5. Quy tắc xử lý booking mock (Chuẩn v2.0)
 
--   Không cho đặt slot đã BOOKED.
--   Không cho đặt slot HOLD còn hiệu lực.
--   Không cho đặt slot nằm trong blocked slot.
--   Không cho đặt ngoài operating hours.
--   Không cho đặt sân MAINTENANCE hoặc INACTIVE.
--   Không cho đặt sân thuộc facility chưa APPROVED.
--   Khi booking bị hủy/từ chối, giải phóng các slot của booking.
--   Khi HOLD hết hạn, mock service phải kiểm tra `expiresAt` và giải
-    phóng khi cần; không dựa vào TTL.
+-   Một booking chỉ thuộc một `courtId`, nhưng có thể gồm nhiều khung giờ trong mảng `items`.
+-   Không cho đặt slot đã `BOOKED`.
+-   Không cho đặt slot `HOLD` còn hiệu lực (`expiresAt > now`).
+-   Không cho đặt slot nằm trong `blocked_slots`.
+-   Không cho đặt ngoài `timeSlots` của mẫu `DAILY` trong `operating_hours`.
+-   Không cho đặt sân `MAINTENANCE` hoặc `INACTIVE`.
+-   Không cho đặt sân thuộc facility chưa `APPROVED`.
+-   **Giữ chỗ 1 giờ:** Khi tạo booking, `holdExpiresAt = createdAt + 1 giờ`. Khi `HOLD` quá hạn mà chưa thanh toán tối thiểu 20% cọc, mock service chuyển booking sang `EXPIRED` và giải phóng slot (`RELEASED`).
+-   **Hủy trong 24 giờ:** Chỉ cho phép hủy đơn đã thanh toán/cọc khi `now <= cancellationDeadline` (`createdAt + 24 giờ`). Sau 24 giờ, từ chối hủy với mã lỗi `CANCELLATION_WINDOW_EXPIRED`.
+-   Khi booking bị hủy hợp lệ, giải phóng toàn bộ `booking_slots` của booking (`status = RELEASED`).
 -   Chống double-click submit bằng loading/disabled state.
 -   Kiểm tra lại availability ở service trước khi tạo booking.
 -   Đây là mô phỏng frontend; không tuyên bố đảm bảo concurrency như
@@ -1640,31 +1619,43 @@ năng Owner đã duyệt.
 -   Không tự chuyển ngày sai khi parse date-only string.
 -   Tạo utility dùng chung cho date/time.
 
-## 10.3. Status badge
+## 10.3. Status badge (Chuẩn v2.0)
 
 Tạo một component `StatusBadge` dùng chung, map status sang label tiếng
 Việt và màu:
 
--   ACTIVE: Đang hoạt động.
--   INACTIVE: Ngừng hoạt động.
--   PENDING: Chờ xử lý.
--   APPROVED: Đã duyệt.
--   REJECTED: Bị từ chối.
--   SUSPENDED: Tạm đình chỉ.
--   AVAILABLE: Có thể đặt.
--   MAINTENANCE: Đang bảo trì.
--   HOLD: Đang giữ chỗ.
--   BOOKED: Đã đặt.
--   CONFIRMED: Đã xác nhận.
--   CANCELLED: Đã hủy.
--   COMPLETED: Hoàn thành.
--   NO_SHOW: Không đến.
--   PAID: Đã thanh toán.
--   UNPAID: Chưa thanh toán.
--   FAILED: Thất bại.
--   REFUNDED: Đã hoàn tiền.
--   PROCESSING: Đang xử lý.
--   RESOLVED: Đã giải quyết.
+-   `ACTIVE`: Đang hoạt động.
+-   `INACTIVE`: Ngừng hoạt động.
+-   `BANNED`: Bị khóa tài khoản.
+-   `NOT_REGISTERED`: Chưa đăng ký.
+-   `PENDING`: Chờ xét duyệt / Chờ xử lý.
+-   `APPROVED`: Đã duyệt.
+-   `REJECTED`: Bị từ chối.
+-   `SUSPENDED`: Tạm đình chỉ.
+-   `AVAILABLE`: Có thể đặt.
+-   `MAINTENANCE`: Đang bảo trì.
+-   `HOLD`: Đang giữ chỗ (1h).
+-   `BOOKED`: Đã đặt.
+-   `RELEASED`: Đã giải phóng.
+-   `PENDING_PAYMENT`: Chờ thanh toán.
+-   `CONFIRMED`: Đã xác nhận.
+-   `EXPIRED`: Hết hạn giữ chỗ.
+-   `CANCELLED`: Đã hủy.
+-   `COMPLETED`: Hoàn thành.
+-   `UNPAID`: Chưa thanh toán.
+-   `DEPOSIT_PAID`: Đã cọc 20%.
+-   `PAID`: Đã thanh toán đủ.
+-   `REFUND_PENDING`: Đang chờ hoàn tiền.
+-   `PARTIALLY_REFUNDED`: Hoàn tiền một phần.
+-   `REFUNDED`: Đã hoàn tiền.
+-   `PAYMENT_FAILED` / `FAILED`: Thanh toán thất bại.
+-   `VISIBLE`: Hiển thị.
+-   `HIDDEN`: Đã ẩn.
+-   `PENDING_REVIEW`: Chờ kiểm duyệt.
+-   `OPEN`: Mới gửi.
+-   `IN_PROGRESS`: Đang xử lý.
+-   `RESOLVED`: Đã giải quyết.
+-   `CLOSED`: Đã đóng.
 
 Không tự ý đổi enum lưu trong mock. Label tiếng Việt chỉ là lớp hiển
 thị.
@@ -1675,14 +1666,12 @@ thị.
 -   Password có độ dài tối thiểu hợp lý và xác nhận khớp.
 -   Phone chỉ chứa ký tự số và dấu `+` nếu cho phép.
 -   Giá và số lượng không âm.
--   `endTime` phải sau `startTime`.
--   `validTo` không trước `validFrom`.
+-   `endTime` phải sau `startTime` và các khung giờ trong `timeSlots` không chồng lấn.
+-   `validTo` không trước `validFrom`; `effectiveTo` không trước `effectiveFrom`.
 -   `startAt` phải trước `endAt`.
 -   Rating từ 1 đến 5.
--   Discount percentage trong khoảng 1--100.
--   `maxDiscount`, `minOrderAmount`, `usageLimit` phải hợp lệ.
 -   Không tạo slot nằm ngoài giờ hoạt động.
--   Không tạo price rule sai khoảng thời gian.
+-   Không tạo price rule sai khoảng thời gian; `specificDates` đúng định dạng `YYYY-MM-DD`.
 -   Hiển thị lỗi ngay tại field.
 
 ------------------------------------------------------------------------
@@ -1788,12 +1777,12 @@ Tiêu chí:
 -   [ ] Search/filter/sort/pagination hoạt động.
 -   [ ] Form validate.
 -   [ ] CRUD mock hoạt động.
--   [ ] Booking flow chạy từ tìm sân đến kết quả thanh toán.
--   [ ] Booking slot được giữ/giải phóng đúng trong mock.
--   [ ] Owner xử lý booking.
--   [ ] Admin duyệt Owner và Facility.
--   [ ] Customer xem booking, favorite, notification, review, complaint.
--   [ ] Promotion tính giảm giá đúng.
+-   [ ] Booking flow chạy từ chọn nhiều khung giờ đến đặt cọc 20% / thanh toán 100%.
+-   [ ] Booking slot được giữ (`HOLD` 1 giờ), chuyển `BOOKED` hoặc giải phóng (`RELEASED`) đúng trong mock.
+-   [ ] Chính sách hủy hoàn tiền trong vòng 24 giờ và chặn hủy sau 24 giờ hoạt động đúng.
+-   [ ] Owner xử lý booking, cấu hình mẫu lịch `DAILY` và `price_rules` (`specificDates`).
+-   [ ] Admin chỉ quản lý Users, Owner Applications, Categories, Reviews và Complaints (đúng phạm vi v2.0).
+-   [ ] Customer xem booking, thanh toán phần còn lại (`REMAINING`), favorite, notification, review, complaint và quản lý phiên đăng nhập (`auth_sessions`).
 -   [ ] Dashboard tính KPI từ mock data.
 -   [ ] Toast/modal/drawer hoạt động.
 -   [ ] Reset mock data hoạt động.
@@ -1802,7 +1791,7 @@ Tiêu chí:
 
 ## 15.3. Kiểm tra dữ liệu
 
--   [ ] Có đủ 17 file dữ liệu mock.
+-   [ ] Có đủ **16 file dữ liệu mock** theo `Database_Design.md` (v2.0).
 -   [ ] Field name khớp database.
 -   [ ] Enum khớp database.
 -   [ ] ObjectId tham chiếu tồn tại.
@@ -1861,7 +1850,7 @@ dùng làm bản demo học kỳ và tiếp tục kết nối Spring Boot sau n�
 3.  Đầy đủ các route/page được liệt kê.
 4.  Hệ thống component dùng chung.
 5.  Design tokens, global styles và CSS scoped.
-6.  Thư mục `frontend/mock/` có 17 file dữ liệu.
+6.  Thư mục `frontend/mock/` có **16 file dữ liệu** khớp `Database_Design.md` v2.0.
 7.  Mock services CRUD và query.
 8.  Demo accounts cho Customer, Owner approved, Owner pending, Admin.
 9.  Các flow demo end-to-end.
@@ -1878,13 +1867,11 @@ dùng làm bản demo học kỳ và tiếp tục kết nối Spring Boot sau n�
 
 Trước khi bắt đầu:
 
-1.  Tìm và đọc file database trong repository. File chuẩn hiện có thể
-    mang tên `SportBooking_Database_Design.md` hoặc được nhóm đổi thành
-    `database.md`.
+1.  Tìm và đọc kỹ `Database_Design.md` và `SportBooking_Backend_Functions_API_Security_Guidelines.md` trong repository.
 2.  Nếu không tìm thấy file database, dừng việc tự thiết kế schema và
     yêu cầu người dùng cung cấp; không tự suy đoán.
 3.  Tạo bảng đối chiếu Collection → mock file → service → page sử dụng.
-4.  Tạo đủ 17 Collections mock trước khi hoàn thiện các trang phụ thuộc
+4.  Tạo đủ **16 Collections mock** trước khi hoàn thiện các trang phụ thuộc
     dữ liệu.
 5.  Xây dựng design system và layout dùng chung trước khi triển khai
     hàng loạt page.
