@@ -1,0 +1,69 @@
+:root {
+  /* Brand colors */
+  --sb-primary-900: #123B32;
+  --sb-primary-800: #185044;
+  --sb-primary-700: #216B59;
+  --sb-primary-600: #2D8A70;
+  --sb-primary-500: #38A385;
+  --sb-primary-100: #E5F4EE;
+  --sb-primary-50: #F3FAF6;
+
+  /* Accent */
+  --sb-accent-600: #D98E20;
+  --sb-accent-500: #F2A93B;
+  --sb-accent-100: #FFF3D9;
+
+  /* Neutrals */
+  --sb-background: #F7F9F8;
+  --sb-surface: #FFFFFF;
+  --sb-surface-hover: #F9FBFA;
+  --sb-text-primary: #172B25;
+  --sb-text-secondary: #66756F;
+  --sb-text-muted: #8B9691;
+  --sb-border: #E5EBE7;
+  --sb-border-subtle: #EDF1EE;
+
+  /* States */
+  --sb-success: #21865B;
+  --sb-success-bg: #E8F6EE;
+  --sb-warning: #C78319;
+  --sb-warning-bg: #FFF5DF;
+  --sb-danger: #D64B4B;
+  --sb-danger-bg: #FDECEC;
+  --sb-info: #3478B8;
+  --sb-info-bg: #EAF3FC;
+
+  /* Typography */
+  --sb-font-sans: 'Be Vietnam Pro', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --sb-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Spacing */
+  --sb-space-1: 4px;
+  --sb-space-2: 8px;
+  --sb-space-3: 12px;
+  --sb-space-4: 16px;
+  --sb-space-5: 20px;
+  --sb-space-6: 24px;
+  --sb-space-8: 32px;
+  --sb-space-10: 40px;
+  --sb-space-12: 48px;
+  --sb-space-16: 64px;
+  --sb-space-20: 80px;
+
+  /* Radius */
+  --sb-radius-sm: 8px;
+  --sb-radius-md: 12px;
+  --sb-radius-lg: 16px;
+  --sb-radius-xl: 20px;
+  --sb-radius-full: 9999px;
+
+  /* Shadows */
+  --sb-shadow-xs: 0 1px 2px rgba(18, 59, 50, 0.05);
+  --sb-shadow-sm: 0 2px 8px rgba(18, 59, 50, 0.06);
+  --sb-shadow-md: 0 4px 18px rgba(18, 59, 50, 0.08);
+  --sb-shadow-lg: 0 10px 30px rgba(18, 59, 50, 0.12);
+
+  /* Transitions */
+  --sb-transition: 180ms ease-in-out;
+}
+
