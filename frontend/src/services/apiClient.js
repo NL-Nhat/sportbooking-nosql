@@ -79,7 +79,8 @@ export async function apiRequest(endpoint, options = {}, isRetry = false) {
   const isAuthPublicEndpoint =
     normalizedEndpoint.startsWith('/auth/login') ||
     normalizedEndpoint.startsWith('/auth/register') ||
-    normalizedEndpoint.startsWith('/auth/refresh');
+    normalizedEndpoint.startsWith('/auth/refresh') ||
+    normalizedEndpoint.startsWith('/auth/logout');
 
   let token = localStorage.getItem('sb_access_token');
 

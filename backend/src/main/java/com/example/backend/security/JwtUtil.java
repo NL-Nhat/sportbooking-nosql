@@ -1,6 +1,7 @@
 package com.example.backend.security;
 
 import com.example.backend.models.User;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,7 @@ public class JwtUtil {
 
     private static final String HMAC_SHA256 = "HmacSHA256";
     private static final Base64.Encoder BASE64_URL_ENCODER = Base64.getUrlEncoder().withoutPadding();
+    private static final Base64.Decoder BASE64_URL_DECODER = Base64.getUrlDecoder();
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -63,6 +65,31 @@ public class JwtUtil {
             return signingInput + "." + signHmacSha256(signingInput);
         } catch (Exception e) {
             throw new IllegalStateException("Không thể khởi tạo JWT access token", e);
+        }
+    }
+
+    public String extractSessionId(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        String[] parts = token.split("\\.");
+        if (parts.length != 3) {
+            return null;
+        }
+        try {
+            String signingInput = parts[0] + "." + parts[1];
+            String expectedSignature = signHmacSha256(signingInput);
+            if (!MessageDigest.isEqual(
+                    expectedSignature.getBytes(StandardCharsets.UTF_8),
+                    parts[2].getBytes(StandardCharsets.UTF_8)
+            )) {
+                return null;
+            }
+            byte[] payloadBytes = BASE64_URL_DECODER.decode(parts[1]);
+            Map<String, Object> claims = objectMapper.readValue(payloadBytes, new TypeReference<Map<String, Object>>() {});
+            return claims.get("sid") instanceof String sid ? sid : null;
+        } catch (Exception e) {
+            return null;
         }
     }
 

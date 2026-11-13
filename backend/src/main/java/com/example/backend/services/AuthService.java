@@ -285,6 +285,33 @@ public class AuthService {
         return new RefreshResult(response, newRawRefreshToken);
     }
 
+    public void logout(String authorizationHeader, String rawRefreshToken) {
+        Instant now = Instant.now();
+
+        if (rawRefreshToken != null && !rawRefreshToken.isBlank()) {
+            String tokenHash = jwtUtil.sha256Hex(rawRefreshToken);
+            authSessionRepository.findByRefreshTokenHash(tokenHash).ifPresent(session -> {
+                if (session.getRevokedAt() == null) {
+                    session.setRevokedAt(now);
+                    authSessionRepository.save(session);
+                }
+            });
+        }
+
+        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
+            String accessToken = authorizationHeader.substring(7).trim();
+            String sessionId = jwtUtil.extractSessionId(accessToken);
+            if (sessionId != null) {
+                authSessionRepository.findBySessionId(sessionId).ifPresent(session -> {
+                    if (session.getRevokedAt() == null) {
+                        session.setRevokedAt(now);
+                        authSessionRepository.save(session);
+                    }
+                });
+            }
+        }
+    }
+
     private void revokeFamily(String familyId, Instant now) {
         if (familyId == null || familyId.isBlank()) {
             return;

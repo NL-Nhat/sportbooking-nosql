@@ -76,11 +76,17 @@ export function AuthProvider({ children }) {
     return normalizedUser;
   };
 
-  const logout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('sb_access_token');
-    localStorage.removeItem('sb_user');
-    localStorage.removeItem('sb_active_user_id');
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // Vẫn xóa phiên ở client nếu kết nối mạng gián đoạn
+    } finally {
+      setCurrentUser(null);
+      localStorage.removeItem('sb_access_token');
+      localStorage.removeItem('sb_user');
+      localStorage.removeItem('sb_active_user_id');
+    }
   };
 
   const refreshUser = async () => {

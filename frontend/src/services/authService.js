@@ -25,5 +25,11 @@ export const authService = {
 
   refresh: async () => {
     return refreshAccessToken();
+  },
+
+  logout: async () => {
+    return apiRequest('/auth/logout', {
+      method: 'POST'
+    });
   }
 };
