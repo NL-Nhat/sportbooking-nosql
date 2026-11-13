@@ -3,6 +3,7 @@ package com.example.backend.services;
 import com.example.backend.dtos.auth.AuthUserDto;
 import com.example.backend.dtos.auth.LoginRequest;
 import com.example.backend.dtos.auth.LoginResponse;
+import com.example.backend.dtos.auth.RefreshTokenResponse;
 import com.example.backend.dtos.auth.RegisterRequest;
 import com.example.backend.dtos.auth.RegisterResponse;
 import com.example.backend.dtos.response.ApiErrorResponse.FieldErrorDetail;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -44,6 +46,13 @@ public class AuthService {
     @RequiredArgsConstructor
     public static class LoginResult {
         private final LoginResponse response;
+        private final String rawRefreshToken;
+    }
+
+    @Getter
+    @RequiredArgsConstructor
+    public static class RefreshResult {
+        private final RefreshTokenResponse response;
         private final String rawRefreshToken;
     }
 
@@ -204,5 +213,90 @@ public class AuthService {
                 .build();
 
         return new LoginResult(loginResponse, rawRefreshToken);
+    }
+
+    public RefreshResult refreshAccessToken(String rawRefreshToken, String clientIp, String userAgent) {
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            throw new AppException(
+                    HttpStatus.UNAUTHORIZED,
+                    "MISSING_REFRESH_TOKEN",
+                    "Phiên đăng nhập không tồn tại hoặc đã hết hạn"
+            );
+        }
+
+        String tokenHash = jwtUtil.sha256Hex(rawRefreshToken);
+        Instant now = Instant.now();
+
+        Optional<AuthSession> sessionOpt = authSessionRepository.findByRefreshTokenHash(tokenHash);
+        if (sessionOpt.isEmpty()) {
+            authSessionRepository.findByPreviousTokenHash(tokenHash)
+                    .ifPresent(reused -> revokeFamily(reused.getFamilyId(), now));
+            throw new AppException(
+                    HttpStatus.UNAUTHORIZED,
+                    "INVALID_REFRESH_TOKEN",
+                    "Refresh token không hợp lệ hoặc đã bị thu hồi"
+            );
+        }
+
+        AuthSession session = sessionOpt.get();
+        if (session.getRevokedAt() != null || (session.getExpiresAt() != null && session.getExpiresAt().isBefore(now))) {
+            throw new AppException(
+                    HttpStatus.UNAUTHORIZED,
+                    "SESSION_EXPIRED",
+                    "Refresh token đã hết hạn. Vui lòng đăng nhập lại"
+            );
+        }
+
+        User user = userRepository.findById(session.getUserId())
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.UNAUTHORIZED,
+                        "USER_NOT_FOUND",
+                        "Không tìm thấy người dùng"
+                ));
+
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            session.setRevokedAt(now);
+            authSessionRepository.save(session);
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "ACCOUNT_NOT_ACTIVE",
+                    "Tài khoản không ở trạng thái hoạt động"
+            );
+        }
+
+        String newRawRefreshToken = jwtUtil.generateOpaqueRefreshToken();
+        session.setPreviousTokenHash(tokenHash);
+        session.setRefreshTokenHash(jwtUtil.sha256Hex(newRawRefreshToken));
+        session.setLastUsedAt(now);
+        if (clientIp != null && !clientIp.isBlank()) {
+            session.setIpAddress(clientIp);
+        }
+        if (userAgent != null && !userAgent.isBlank()) {
+            session.setUserAgent(userAgent);
+        }
+        authSessionRepository.save(session);
+
+        RefreshTokenResponse response = RefreshTokenResponse.builder()
+                .accessToken(jwtUtil.generateAccessToken(user, session.getSessionId()))
+                .tokenType("Bearer")
+                .expiresIn(jwtUtil.getAccessTokenExpirationSeconds())
+                .build();
+
+        return new RefreshResult(response, newRawRefreshToken);
+    }
+
+    private void revokeFamily(String familyId, Instant now) {
+        if (familyId == null || familyId.isBlank()) {
+            return;
+        }
+        List<AuthSession> sessions = authSessionRepository.findByFamilyId(familyId);
+        for (AuthSession s : sessions) {
+            if (s.getRevokedAt() == null) {
+                s.setRevokedAt(now);
+            }
+        }
+        if (!sessions.isEmpty()) {
+            authSessionRepository.saveAll(sessions);
+        }
     }
 }

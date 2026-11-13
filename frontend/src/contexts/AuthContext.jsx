@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authService } from '../services/authService.js';
+import { isAccessTokenExpired, refreshAccessToken } from '../services/apiClient.js';
 
 const AuthContext = createContext(null);
 
@@ -19,19 +20,27 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const initUser = useCallback(() => {
+  const initUser = useCallback(async () => {
     try {
       const token = localStorage.getItem('sb_access_token');
       const savedUserRaw = localStorage.getItem('sb_user');
-      if (token && savedUserRaw) {
-        const parsedUser = JSON.parse(savedUserRaw);
-        setCurrentUser(normalizeUser(parsedUser));
-      } else {
+
+      if (!savedUserRaw) {
         setCurrentUser(null);
+        return;
       }
+
+      // Nếu accessToken đã hết hạn, tự động dùng refreshToken trong HttpOnly Cookie để cấp lại
+      if (!token || isAccessTokenExpired(token)) {
+        await refreshAccessToken();
+      }
+
+      const parsedUser = JSON.parse(savedUserRaw);
+      setCurrentUser(normalizeUser(parsedUser));
     } catch {
       localStorage.removeItem('sb_access_token');
       localStorage.removeItem('sb_user');
+      localStorage.removeItem('sb_active_user_id');
       setCurrentUser(null);
     } finally {
       setLoading(false);
@@ -40,6 +49,12 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     initUser();
+
+    const handleSessionExpired = () => {
+      setCurrentUser(null);
+    };
+    window.addEventListener('sb:session-expired', handleSessionExpired);
+    return () => window.removeEventListener('sb:session-expired', handleSessionExpired);
   }, [initUser]);
 
   const register = async ({ fullName, email, password, phone }) => {

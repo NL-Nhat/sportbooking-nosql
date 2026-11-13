@@ -1,4 +1,4 @@
-import { apiRequest } from './apiClient.js';
+import { apiRequest, refreshAccessToken } from './apiClient.js';
 
 export const authService = {
   register: async ({ fullName, email, password, phone }) => {
@@ -21,5 +21,9 @@ export const authService = {
         password
       })
     });
+  },
+
+  refresh: async () => {
+    return refreshAccessToken();
   }
 };
