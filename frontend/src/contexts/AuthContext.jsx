@@ -1,22 +1,38 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { userMockService } from '../../mock/services/userMockService.js';
-import { DEMO_ACCOUNTS } from '../../mock/fixtures/demoAccounts.js';
-import { USER_IDS } from '../../mock/fixtures/ids.js';
 import { authService } from '../services/authService.js';
 
 const AuthContext = createContext(null);
+
+function normalizeUser(user) {
+  if (!user) return null;
+  const resolvedId = user.id || user._id;
+  return {
+    ...user,
+    id: resolvedId,
+    _id: resolvedId,
+    roles: Array.isArray(user.roles) ? user.roles : ['CUSTOMER'],
+    ownerStatus: user.ownerStatus || 'NOT_REGISTERED'
+  };
+}
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const initUser = useCallback(async () => {
+  const initUser = useCallback(() => {
     try {
-      const savedId = localStorage.getItem('sb_active_user_id') || USER_IDS.CUSTOMER_1;
-      const user = await userMockService.getById(savedId);
-      setCurrentUser(user);
-    } catch (e) {
-      console.error('Failed to init auth user:', e);
+      const token = localStorage.getItem('sb_access_token');
+      const savedUserRaw = localStorage.getItem('sb_user');
+      if (token && savedUserRaw) {
+        const parsedUser = JSON.parse(savedUserRaw);
+        setCurrentUser(normalizeUser(parsedUser));
+      } else {
+        setCurrentUser(null);
+      }
+    } catch {
+      localStorage.removeItem('sb_access_token');
+      localStorage.removeItem('sb_user');
+      setCurrentUser(null);
     } finally {
       setLoading(false);
     }
@@ -26,42 +42,34 @@ export function AuthProvider({ children }) {
     initUser();
   }, [initUser]);
 
-  /**
-   * Đăng ký tài khoản mới kết nối trực tiếp tới Backend thật: POST /api/v1/auth/register
-   */
   const register = async ({ fullName, email, password, phone }) => {
-    const response = await authService.register({ fullName, email, password, phone });
-    return response;
+    return authService.register({ fullName, email, password, phone });
   };
 
   const login = async (email, password) => {
-    const user = await userMockService.login(email, password);
-    setCurrentUser(user);
-    localStorage.setItem('sb_active_user_id', user._id);
-    return user;
+    const response = await authService.login({ email, password });
+    const data = response?.data;
+    if (!data?.accessToken || !data?.user) {
+      throw new Error('Phản hồi đăng nhập từ máy chủ không hợp lệ.');
+    }
+
+    const normalizedUser = normalizeUser(data.user);
+    localStorage.setItem('sb_access_token', data.accessToken);
+    localStorage.setItem('sb_user', JSON.stringify(normalizedUser));
+    localStorage.setItem('sb_active_user_id', normalizedUser.id);
+    setCurrentUser(normalizedUser);
+    return normalizedUser;
   };
 
   const logout = () => {
     setCurrentUser(null);
-    localStorage.removeItem('sb_active_user_id');
     localStorage.removeItem('sb_access_token');
-  };
-
-  const switchAccount = async (roleKey) => {
-    const account = DEMO_ACCOUNTS.find((a) => a.roleKey === roleKey);
-    if (account) {
-      const user = await userMockService.getById(account.userId);
-      setCurrentUser(user);
-      localStorage.setItem('sb_active_user_id', user._id);
-      return user;
-    }
+    localStorage.removeItem('sb_user');
+    localStorage.removeItem('sb_active_user_id');
   };
 
   const refreshUser = async () => {
-    if (currentUser) {
-      const updated = await userMockService.getById(currentUser._id);
-      setCurrentUser(updated);
-    }
+    return currentUser;
   };
 
   const value = {
@@ -71,7 +79,6 @@ export function AuthProvider({ children }) {
     register,
     login,
     logout,
-    switchAccount,
     refreshUser,
     isAuthenticated: Boolean(currentUser),
     isAdmin: currentUser?.roles?.includes('ADMIN') || false,

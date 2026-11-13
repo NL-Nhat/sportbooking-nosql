@@ -3,29 +3,59 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import { ROUTES } from '../../constants/routes.js';
-import { Eye, EyeOff, LogIn, UserCheck, Shield, Clock, User } from 'lucide-react';
+import { Eye, EyeOff, LogIn, AlertCircle } from 'lucide-react';
 
 export function LoginPage() {
-  const { login, switchAccount } = useAuth();
+  const { login } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
 
   const registeredEmail = location.state?.registeredEmail || '';
-  const [email, setEmail] = useState(registeredEmail || '');
+  const [email, setEmail] = useState(registeredEmail);
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const redirectPath = new URLSearchParams(location.search).get('redirect') || null;
+
+  const clearFieldError = (field) => {
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: '' }));
+    }
+    if (error) {
+      setError('');
+    }
+  };
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const clientErrors = {};
+
+    if (!trimmedEmail) {
+      clientErrors.email = 'Email không được để trống.';
+    } else if (!/^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(trimmedEmail)) {
+      clientErrors.email = 'Địa chỉ email không đúng định dạng.';
+    }
+
+    if (!password) {
+      clientErrors.password = 'Mật khẩu không được để trống.';
+    }
+
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors);
+      return;
+    }
+
     setLoading(true);
     try {
-      const user = await login(email, password);
+      const user = await login(trimmedEmail, password);
       showToast(`Đăng nhập thành công! Chào ${user.fullName}`, 'success');
 
       if (redirectPath) {
@@ -38,20 +68,20 @@ export function LoginPage() {
         navigate(ROUTES.ACCOUNT);
       }
     } catch (err) {
-      setError(err.message || 'Email hoặc mật khẩu không đúng.');
-      showToast(err.message, 'error');
+      if (Array.isArray(err.details) && err.details.length > 0) {
+        const backendFieldErrors = {};
+        err.details.forEach((detail) => {
+          if (detail.field) {
+            backendFieldErrors[detail.field] = detail.message;
+          }
+        });
+        setFieldErrors(backendFieldErrors);
+      }
+      const msg = err.message || 'Email hoặc mật khẩu không chính xác.';
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleQuickDemo = async (roleKey, targetRoute, label) => {
-    try {
-      const user = await switchAccount(roleKey);
-      showToast(`Đăng nhập nhanh vai trò ${label}`, 'success');
-      navigate(targetRoute);
-    } catch (err) {
-      showToast(err.message, 'error');
     }
   };
 
@@ -63,90 +93,62 @@ export function LoginPage() {
       </div>
 
       {error && (
-        <div style={{
-          padding: '12px',
-          backgroundColor: 'var(--sb-danger-bg)',
-          color: 'var(--sb-danger)',
-          borderRadius: 'var(--sb-radius-md)',
-          fontSize: '0.85rem',
-          marginBottom: '16px'
-        }}>
-          {error}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px',
+            backgroundColor: 'var(--sb-danger-bg)',
+            color: 'var(--sb-danger)',
+            borderRadius: 'var(--sb-radius-md)',
+            fontSize: '0.85rem',
+            marginBottom: '16px'
+          }}
+        >
+          <AlertCircle size={16} style={{ flexShrink: 0 }} />
+          <span>{error}</span>
         </div>
       )}
 
-      {/* Demo Fast Logins Box */}
-      <div style={{
-        padding: '14px',
-        backgroundColor: 'var(--sb-primary-50)',
-        borderRadius: 'var(--sb-radius-md)',
-        border: '1px dashed var(--sb-primary-600)',
-        marginBottom: '20px'
-      }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--sb-primary-900)', textTransform: 'uppercase', marginBottom: '8px' }}>
-          ⚡ Đăng nhập nhanh 1-Click (Demo)
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('CUSTOMER', ROUTES.ACCOUNT, 'Khách hàng')}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.75rem', justifyContent: 'flex-start' }}
-          >
-            <User size={13} color="var(--sb-primary-600)" /> Khách hàng
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('OWNER_APPROVED', ROUTES.OWNER_DASHBOARD, 'Chủ sân')}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.75rem', justifyContent: 'flex-start' }}
-          >
-            <UserCheck size={13} color="var(--sb-success)" /> Chủ sân (Duyệt)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('OWNER_PENDING', ROUTES.OWNER_DASHBOARD, 'Chủ sân chờ duyệt')}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.75rem', justifyContent: 'flex-start' }}
-          >
-            <Clock size={13} color="var(--sb-warning)" /> Chủ sân (Chờ)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleQuickDemo('ADMIN', ROUTES.ADMIN_DASHBOARD, 'Quản trị viên')}
-            className="btn btn-secondary btn-sm"
-            style={{ fontSize: '0.75rem', justifyContent: 'flex-start' }}
-          >
-            <Shield size={13} color="var(--sb-danger)" /> Admin
-          </button>
-        </div>
-      </div>
-
-      <form onSubmit={handleLoginSubmit}>
+      <form onSubmit={handleLoginSubmit} noValidate>
         <div className="form-group">
-          <label className="form-label">Email tài khoản</label>
+          <label className="form-label">Email tài khoản <span className="required">*</span></label>
           <input
             type="email"
             className="form-control"
+            placeholder="email@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              clearFieldError('email');
+            }}
             required
           />
+          {fieldErrors.email && (
+            <div style={{ color: 'var(--sb-danger)', fontSize: '0.78rem', marginTop: '4px' }}>
+              {fieldErrors.email}
+            </div>
+          )}
         </div>
 
         <div className="form-group">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label className="form-label" style={{ margin: 0 }}>Mật khẩu</label>
+            <label className="form-label" style={{ margin: 0 }}>Mật khẩu <span className="required">*</span></label>
             <Link to={ROUTES.FORGOT_PASSWORD} style={{ fontSize: '0.775rem', color: 'var(--sb-primary-600)' }}>
               Quên mật khẩu?
             </Link>
           </div>
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', marginTop: '6px' }}>
             <input
               type={showPassword ? 'text' : 'password'}
               className="form-control"
+              placeholder="Nhập mật khẩu của bạn"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clearFieldError('password');
+              }}
               required
               style={{ paddingRight: '40px' }}
             />
@@ -164,6 +166,11 @@ export function LoginPage() {
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
           </div>
+          {fieldErrors.password && (
+            <div style={{ color: 'var(--sb-danger)', fontSize: '0.78rem', marginTop: '4px' }}>
+              {fieldErrors.password}
+            </div>
+          )}
         </div>
 
         <button

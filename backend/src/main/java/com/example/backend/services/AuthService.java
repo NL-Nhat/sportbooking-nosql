@@ -1,13 +1,19 @@
 package com.example.backend.services;
 
+import com.example.backend.dtos.auth.AuthUserDto;
+import com.example.backend.dtos.auth.LoginRequest;
+import com.example.backend.dtos.auth.LoginResponse;
 import com.example.backend.dtos.auth.RegisterRequest;
 import com.example.backend.dtos.auth.RegisterResponse;
 import com.example.backend.dtos.response.ApiErrorResponse.FieldErrorDetail;
 import com.example.backend.exceptions.AppException;
+import com.example.backend.models.AuthSession;
 import com.example.backend.models.User;
+import com.example.backend.repositories.AuthSessionRepository;
 import com.example.backend.repositories.UserRepository;
+import com.example.backend.security.JwtUtil;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -17,11 +23,9 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -31,86 +35,59 @@ public class AuthService {
     private static final Pattern PHONE_PATTERN =
             Pattern.compile("^(0|\\+84)[0-9]{9,10}$");
 
-    private static final int RATE_LIMIT_MAX_ATTEMPTS = 15;
-    private static final long RATE_LIMIT_WINDOW_MS = 60_000L;
-
     private final UserRepository userRepository;
+    private final AuthSessionRepository authSessionRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    private final Map<String, List<Long>> registerRateLimitMap = new ConcurrentHashMap<>();
+    @Getter
+    @RequiredArgsConstructor
+    public static class LoginResult {
+        private final LoginResponse response;
+        private final String rawRefreshToken;
+    }
 
-    /**
-     * - Email trim + lowercase, unique.
-     * - Phone trim, đúng định dạng, unique.
-     * - Password hash bằng BCrypt, không lưu plaintext.
-     * - Không nhận roles, ownerStatus, status, isEmailVerified từ client.
-     * - Mặc định roles=["CUSTOMER"], ownerStatus="NOT_REGISTERED", status="ACTIVE", isEmailVerified=false.
-     */
-    public RegisterResponse register(RegisterRequest request, String clientIp) {
-        enforceRateLimit(clientIp);
-
+    public RegisterResponse register(RegisterRequest request) {
         if (request == null) {
-            throw new AppException(
-                    HttpStatus.BAD_REQUEST,
-                    "VALIDATION_ERROR",
-                    "Dữ liệu đăng ký không được để trống"
-            );
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu đăng ký không được để trống");
         }
 
-        String normalizedFullName = request.getFullName() != null
-                ? request.getFullName().trim().replaceAll("\\s+", " ")
-                : "";
-        String normalizedEmail = request.getEmail() != null
-                ? request.getEmail().trim().toLowerCase(Locale.ROOT)
-                : "";
-        String normalizedPhone = request.getPhone() != null
-                ? request.getPhone().trim().replaceAll("[\\s.-]", "")
-                : "";
-        String rawPassword = request.getPassword() != null
-                ? request.getPassword()
-                : "";
+        String fullName = request.getFullName() != null ? request.getFullName().trim().replaceAll("\\s+", " ") : "";
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase(Locale.ROOT) : "";
+        String phone = request.getPhone() != null ? request.getPhone().trim().replaceAll("[\\s.-]", "") : "";
+        String password = request.getPassword() != null ? request.getPassword() : "";
 
-        List<FieldErrorDetail> validationErrors = new ArrayList<>();
+        List<FieldErrorDetail> errors = new ArrayList<>();
 
-        // 1. Validate fullName
-        if (normalizedFullName.isEmpty()) {
-            validationErrors.add(new FieldErrorDetail("fullName", "REQUIRED", "Họ và tên không được để trống"));
-        } else if (normalizedFullName.length() < 2 || normalizedFullName.length() > 100) {
-            validationErrors.add(new FieldErrorDetail("fullName", "INVALID_LENGTH", "Họ và tên phải từ 2 đến 100 ký tự"));
+        if (fullName.isEmpty()) {
+            errors.add(new FieldErrorDetail("fullName", "REQUIRED", "Họ và tên không được để trống"));
+        } else if (fullName.length() < 2 || fullName.length() > 100) {
+            errors.add(new FieldErrorDetail("fullName", "INVALID_LENGTH", "Họ và tên phải từ 2 đến 100 ký tự"));
         }
 
-        // 2. Validate email
-        if (normalizedEmail.isEmpty()) {
-            validationErrors.add(new FieldErrorDetail("email", "REQUIRED", "Email không được để trống"));
-        } else if (!EMAIL_PATTERN.matcher(normalizedEmail).matches()) {
-            validationErrors.add(new FieldErrorDetail("email", "INVALID_FORMAT", "Địa chỉ email không đúng định dạng"));
+        if (email.isEmpty()) {
+            errors.add(new FieldErrorDetail("email", "REQUIRED", "Email không được để trống"));
+        } else if (!EMAIL_PATTERN.matcher(email).matches()) {
+            errors.add(new FieldErrorDetail("email", "INVALID_FORMAT", "Địa chỉ email không đúng định dạng"));
         }
 
-        // 3. Validate phone
-        if (normalizedPhone.isEmpty()) {
-            validationErrors.add(new FieldErrorDetail("phone", "REQUIRED", "Số điện thoại không được để trống"));
-        } else if (!PHONE_PATTERN.matcher(normalizedPhone).matches()) {
-            validationErrors.add(new FieldErrorDetail("phone", "INVALID_FORMAT", "Số điện thoại không đúng định dạng (VD: 0901234567)"));
+        if (phone.isEmpty()) {
+            errors.add(new FieldErrorDetail("phone", "REQUIRED", "Số điện thoại không được để trống"));
+        } else if (!PHONE_PATTERN.matcher(phone).matches()) {
+            errors.add(new FieldErrorDetail("phone", "INVALID_FORMAT", "Số điện thoại không đúng định dạng"));
         }
 
-        // 4. Validate password
-        if (rawPassword.isEmpty()) {
-            validationErrors.add(new FieldErrorDetail("password", "REQUIRED", "Mật khẩu không được để trống"));
-        } else if (rawPassword.length() < 6 || rawPassword.length() > 72) {
-            validationErrors.add(new FieldErrorDetail("password", "INVALID_LENGTH", "Mật khẩu phải có từ 6 đến 72 ký tự"));
+        if (password.isEmpty()) {
+            errors.add(new FieldErrorDetail("password", "REQUIRED", "Mật khẩu không được để trống"));
+        } else if (password.length() < 6 || password.length() > 72) {
+            errors.add(new FieldErrorDetail("password", "INVALID_LENGTH", "Mật khẩu phải có từ 6 đến 72 ký tự"));
         }
 
-        if (!validationErrors.isEmpty()) {
-            throw new AppException(
-                    HttpStatus.BAD_REQUEST,
-                    "VALIDATION_ERROR",
-                    "Dữ liệu không hợp lệ",
-                    validationErrors
-            );
+        if (!errors.isEmpty()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu không hợp lệ", errors);
         }
 
-        // 5. Kiểm tra trùng lặp email và số điện thoại trong MongoDB
-        if (userRepository.existsByEmail(normalizedEmail)) {
+        if (userRepository.existsByEmail(email)) {
             throw new AppException(
                     HttpStatus.CONFLICT,
                     "EMAIL_ALREADY_EXISTS",
@@ -119,7 +96,7 @@ public class AuthService {
             );
         }
 
-        if (userRepository.existsByPhone(normalizedPhone)) {
+        if (userRepository.existsByPhone(phone)) {
             throw new AppException(
                     HttpStatus.CONFLICT,
                     "PHONE_ALREADY_EXISTS",
@@ -128,15 +105,12 @@ public class AuthService {
             );
         }
 
-        // 6. Băm mật khẩu bằng BCrypt và khởi tạo User với các giá trị mặc định chuẩn
-        String passwordHash = passwordEncoder.encode(rawPassword);
         Instant now = Instant.now();
-
         User newUser = User.builder()
-                .fullName(normalizedFullName)
-                .email(normalizedEmail)
-                .phone(normalizedPhone)
-                .password(passwordHash)
+                .fullName(fullName)
+                .email(email)
+                .phone(phone)
+                .password(passwordEncoder.encode(password))
                 .roles(List.of("CUSTOMER"))
                 .ownerStatus("NOT_REGISTERED")
                 .status("ACTIVE")
@@ -146,33 +120,89 @@ public class AuthService {
                 .build();
 
         User savedUser = userRepository.save(newUser);
-        log.info("Đã tạo tài khoản mới thành công: userId={}, email={}", savedUser.getId(), savedUser.getEmail());
 
         return RegisterResponse.builder()
                 .userId(savedUser.getId())
                 .fullName(savedUser.getFullName())
                 .email(savedUser.getEmail())
-                .phone(savedUser.getPhone())
                 .roles(savedUser.getRoles())
-                .ownerStatus(savedUser.getOwnerStatus() != null ? savedUser.getOwnerStatus() : "NOT_REGISTERED")
+                .ownerStatus(savedUser.getOwnerStatus())
                 .isEmailVerified(Boolean.TRUE.equals(savedUser.getIsEmailVerified()))
                 .build();
     }
 
-    private void enforceRateLimit(String clientKey) {
-        String key = (clientKey != null && !clientKey.isBlank()) ? clientKey : "unknown";
-        long now = System.currentTimeMillis();
-        List<Long> timestamps = registerRateLimitMap.computeIfAbsent(key, k -> new ArrayList<>());
-        synchronized (timestamps) {
-            timestamps.removeIf(t -> (now - t) > RATE_LIMIT_WINDOW_MS);
-            if (timestamps.size() >= RATE_LIMIT_MAX_ATTEMPTS) {
-                throw new AppException(
-                        HttpStatus.TOO_MANY_REQUESTS,
-                        "RATE_LIMIT_EXCEEDED",
-                        "Bạn đã gửi quá nhiều yêu cầu đăng ký. Vui lòng thử lại sau ít phút."
-                );
-            }
-            timestamps.add(now);
+    public LoginResult login(LoginRequest request, String clientIp, String userAgent) {
+        if (request == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Thông tin đăng nhập không được để trống");
         }
+
+        String email = request.getEmail() != null ? request.getEmail().trim().toLowerCase(Locale.ROOT) : "";
+        String password = request.getPassword() != null ? request.getPassword() : "";
+
+        List<FieldErrorDetail> errors = new ArrayList<>();
+        if (email.isEmpty()) {
+            errors.add(new FieldErrorDetail("email", "REQUIRED", "Email không được để trống"));
+        } else if (!EMAIL_PATTERN.matcher(email).matches()) {
+            errors.add(new FieldErrorDetail("email", "INVALID_FORMAT", "Địa chỉ email không đúng định dạng"));
+        }
+
+        if (password.isEmpty()) {
+            errors.add(new FieldErrorDetail("password", "REQUIRED", "Mật khẩu không được để trống"));
+        }
+
+        if (!errors.isEmpty()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu đăng nhập không hợp lệ", errors);
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.UNAUTHORIZED,
+                        "INVALID_CREDENTIALS",
+                        "Email hoặc mật khẩu không chính xác"
+                ));
+
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new AppException(
+                    HttpStatus.UNAUTHORIZED,
+                    "INVALID_CREDENTIALS",
+                    "Email hoặc mật khẩu không chính xác"
+            );
+        }
+
+        if (!"ACTIVE".equalsIgnoreCase(user.getStatus())) {
+            throw new AppException(
+                    HttpStatus.FORBIDDEN,
+                    "ACCOUNT_NOT_ACTIVE",
+                    "Tài khoản của bạn đã bị khóa hoặc chưa được kích hoạt"
+            );
+        }
+
+        Instant now = Instant.now();
+        String sessionId = "sess_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        String familyId = "fam_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        String rawRefreshToken = jwtUtil.generateOpaqueRefreshToken();
+
+        AuthSession session = AuthSession.builder()
+                .userId(user.getId())
+                .sessionId(sessionId)
+                .familyId(familyId)
+                .refreshTokenHash(jwtUtil.sha256Hex(rawRefreshToken))
+                .userAgent(userAgent != null ? userAgent : "Unknown")
+                .ipAddress(clientIp != null ? clientIp : "127.0.0.1")
+                .expiresAt(now.plusSeconds(jwtUtil.getRefreshTokenExpirationSeconds()))
+                .lastUsedAt(now)
+                .createdAt(now)
+                .build();
+
+        authSessionRepository.save(session);
+
+        LoginResponse loginResponse = LoginResponse.builder()
+                .accessToken(jwtUtil.generateAccessToken(user, sessionId))
+                .tokenType("Bearer")
+                .expiresIn(jwtUtil.getAccessTokenExpirationSeconds())
+                .user(AuthUserDto.fromEntity(user))
+                .build();
+
+        return new LoginResult(loginResponse, rawRefreshToken);
     }
 }

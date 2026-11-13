@@ -10,9 +10,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Chuẩn Response lỗi theo mục 3.3 của SportBooking_Backend_Functions_API_Security_Guidelines.md
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -66,4 +63,3 @@ public class ApiErrorResponse {
                 .build();
     }
 }
-

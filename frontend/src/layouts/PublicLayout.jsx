@@ -2,7 +2,6 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import { PublicHeader } from '../components/common/PublicHeader.jsx';
 import { PublicFooter } from '../components/common/PublicFooter.jsx';
-import { DemoAccountSwitcher } from '../components/common/DemoAccountSwitcher.jsx';
 
 export function PublicLayout() {
   return (
@@ -12,8 +11,6 @@ export function PublicLayout() {
         <Outlet />
       </main>
       <PublicFooter />
-      <DemoAccountSwitcher />
     </div>
   );
 }
-

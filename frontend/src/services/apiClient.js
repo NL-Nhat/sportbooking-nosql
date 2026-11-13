@@ -26,6 +26,7 @@ export async function apiRequest(endpoint, options = {}) {
   let response;
   try {
     response = await fetch(url, {
+      credentials: 'include',
       ...options,
       headers
     });
@@ -59,4 +60,3 @@ export async function apiRequest(endpoint, options = {}) {
 
   return payload;
 }
-

@@ -1,9 +1,8 @@
 import React from 'react';
-import { Outlet, NavLink, Link, Navigate } from 'react-router-dom';
+import { Outlet, NavLink, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { PublicHeader } from '../components/common/PublicHeader.jsx';
 import { PublicFooter } from '../components/common/PublicFooter.jsx';
-import { DemoAccountSwitcher } from '../components/common/DemoAccountSwitcher.jsx';
 import { ROUTES } from '../constants/routes.js';
 import { 
   User, 
@@ -14,7 +13,6 @@ import {
   MessageSquareWarning, 
   Building2, 
   LayoutDashboard,
-  ShieldCheck,
   Laptop
 } from 'lucide-react';
 
@@ -107,7 +105,6 @@ export function CustomerLayout() {
       </div>
 
       <PublicFooter />
-      <DemoAccountSwitcher />
 
       <style>{`
         @media (max-width: 900px) {
@@ -119,4 +116,3 @@ export function CustomerLayout() {
     </div>
   );
 }
-

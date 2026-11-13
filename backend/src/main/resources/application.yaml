@@ -17,6 +17,11 @@ spring:
       max-file-size: 5MB
       max-request-size: 20MB
 
+jwt:
+  secret: ${JWT_SECRET:SportBookingSuperSecretKeyForJwtSigning2026MustBeAtLeast32BytesLong!}
+  access-token-expiration-seconds: 900
+  refresh-token-expiration-seconds: 604800
+
 springdoc:
   api-docs:
     path: /v3/api-docs
