@@ -8,14 +8,16 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Collections;
 
-/**
- * Xử lý ngoại lệ tập trung, đảm bảo trả về chuẩn JSON mục 3.3 và không lộ thông tin nội bộ
- */
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -29,6 +31,59 @@ public class GlobalExceptionHandler {
                 request.getRequestURI()
         );
         return ResponseEntity.status(ex.getStatus()).body(body);
+    }
+
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<ApiErrorResponse> handleEndpointNotFound(Exception ex, HttpServletRequest request) {
+        ApiErrorResponse body = ApiErrorResponse.of(
+                "Đường dẫn API không tồn tại: " + request.getMethod() + " " + request.getRequestURI(),
+                "ENDPOINT_NOT_FOUND",
+                null,
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(body);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMethodNotSupported(
+            HttpRequestMethodNotSupportedException ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse body = ApiErrorResponse.of(
+                "Phương thức HTTP '" + request.getMethod() + "' không được hỗ trợ cho đường dẫn này",
+                "METHOD_NOT_ALLOWED",
+                null,
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(body);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiErrorResponse> handleMediaTypeNotSupported(
+            HttpMediaTypeNotSupportedException ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse body = ApiErrorResponse.of(
+                "Định dạng Content-Type không được hỗ trợ",
+                "UNSUPPORTED_MEDIA_TYPE",
+                null,
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(body);
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiErrorResponse> handleMissingParameter(
+            MissingServletRequestParameterException ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponse body = ApiErrorResponse.of(
+                "Thiếu tham số bắt buộc: " + ex.getParameterName(),
+                "MISSING_PARAMETER",
+                Collections.singletonList(new FieldErrorDetail(ex.getParameterName(), "REQUIRED", "Tham số bắt buộc")),
+                request.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
     @ExceptionHandler(DuplicateKeyException.class)
@@ -57,7 +112,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiErrorResponse> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpServletRequest request) {
         ApiErrorResponse body = ApiErrorResponse.of(
-                "Cấu trúc dữ liệu JSON gửi lên không hợp lệ",
+                "Cấu trúc dữ liệu JSON gửi lên không hợp lệ hoặc bị thiếu",
                 "INVALID_JSON_PAYLOAD",
                 null,
                 request.getRequestURI()
@@ -77,4 +132,3 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 }
-

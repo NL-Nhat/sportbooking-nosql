@@ -1,5 +1,7 @@
 import React from 'react';
-import { NavLink, Link } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext.jsx';
+import { useToast } from '../../contexts/ToastContext.jsx';
 import { Logo } from './Logo.jsx';
 import { ROUTES } from '../../constants/routes.js';
 import {
@@ -18,11 +20,22 @@ import {
   ShieldCheck,
   Layers,
   ArrowLeft,
+  LogOut,
   Settings,
   X
 } from 'lucide-react';
 
 export function DashboardSidebar({ role = 'OWNER', isOpen, onClose }) {
+  const { logout } = useAuth();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    if (onClose) onClose();
+    await logout();
+    showToast('Đăng xuất thành công', 'success');
+    navigate(ROUTES.LOGIN);
+  };
   const ownerMenuItems = [
     { label: 'Tổng quan', path: ROUTES.OWNER_DASHBOARD, icon: LayoutDashboard },
     { label: 'Cơ sở của tôi', path: ROUTES.OWNER_FACILITIES, icon: Building2 },
@@ -143,8 +156,8 @@ export function DashboardSidebar({ role = 'OWNER', isOpen, onClose }) {
           })}
         </nav>
 
-        {/* Back to Public Home */}
-        <div style={{ padding: '16px 12px', borderTop: '1px solid var(--sb-border)' }}>
+        {/* Back to Public Home & Logout */}
+        <div style={{ padding: '16px 12px', borderTop: '1px solid var(--sb-border)', display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <Link
             to={ROUTES.HOME}
             style={{
@@ -161,6 +174,26 @@ export function DashboardSidebar({ role = 'OWNER', isOpen, onClose }) {
             <ArrowLeft size={16} />
             <span>Về trang chủ</span>
           </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '10px 14px',
+              borderRadius: 'var(--sb-radius-md)',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              color: 'var(--sb-danger)',
+              width: '100%',
+              textAlign: 'left',
+              transition: 'background-color var(--sb-transition)'
+            }}
+          >
+            <LogOut size={16} />
+            <span>Đăng xuất</span>
+          </button>
         </div>
       </aside>
 

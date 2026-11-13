@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
+import { useToast } from '../../contexts/ToastContext.jsx';
 import { notificationMockService } from '../../../mock/services/notificationMockService.js';
 import { Logo } from './Logo.jsx';
 import { ROUTES } from '../../constants/routes.js';
@@ -8,6 +9,7 @@ import { Bell, User, Heart, Calendar, LogOut, Menu, X, Shield, LayoutDashboard }
 
 export function PublicHeader() {
   const { user, isAuthenticated, isOwner, isAdmin, logout } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -28,10 +30,12 @@ export function PublicHeader() {
     { label: 'Liên hệ', path: ROUTES.CONTACT }
   ];
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
     setUserDropdown(false);
-    navigate(ROUTES.HOME);
+    setMenuOpen(false);
+    await logout();
+    showToast('Đăng xuất thành công', 'success');
+    navigate(ROUTES.LOGIN);
   };
 
   return (

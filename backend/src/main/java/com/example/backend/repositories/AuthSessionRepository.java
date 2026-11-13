@@ -10,6 +10,8 @@ import java.util.Optional;
 @Repository
 public interface AuthSessionRepository extends MongoRepository<AuthSession, String> {
 
+    Optional<AuthSession> findBySessionId(String sessionId);
+
     Optional<AuthSession> findByRefreshTokenHash(String refreshTokenHash);
 
     Optional<AuthSession> findByPreviousTokenHash(String previousTokenHash);

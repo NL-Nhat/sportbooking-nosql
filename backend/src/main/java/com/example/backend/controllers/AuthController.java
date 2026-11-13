@@ -21,13 +21,14 @@ import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "01. Authentication", description = "Các API xác thực người dùng (Đăng ký, Đăng nhập, Làm mới token)")
+@Tag(name = "01. Authentication", description = "Các API xác thực người dùng (Đăng ký, Đăng nhập, Làm mới token, Đăng xuất)")
 public class AuthController {
 
     private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
@@ -54,7 +55,11 @@ public class AuthController {
         String userAgent = servletRequest.getHeader(HttpHeaders.USER_AGENT);
 
         LoginResult result = authService.login(request, clientIp, userAgent);
-        ResponseCookie refreshCookie = buildRefreshTokenCookie(result.getRawRefreshToken(), servletRequest.isSecure());
+        ResponseCookie refreshCookie = buildRefreshTokenCookie(
+                result.getRawRefreshToken(),
+                jwtUtil.getRefreshTokenExpirationSeconds(),
+                servletRequest.isSecure()
+        );
 
         return ResponseEntity
                 .ok()
@@ -70,7 +75,11 @@ public class AuthController {
         String userAgent = servletRequest.getHeader(HttpHeaders.USER_AGENT);
 
         RefreshResult result = authService.refreshAccessToken(rawRefreshToken, clientIp, userAgent);
-        ResponseCookie newRefreshCookie = buildRefreshTokenCookie(result.getRawRefreshToken(), servletRequest.isSecure());
+        ResponseCookie newRefreshCookie = buildRefreshTokenCookie(
+                result.getRawRefreshToken(),
+                jwtUtil.getRefreshTokenExpirationSeconds(),
+                servletRequest.isSecure()
+        );
 
         return ResponseEntity
                 .ok()
@@ -78,13 +87,30 @@ public class AuthController {
                 .body(ApiSuccessResponse.success("Làm mới token thành công", result.getResponse()));
     }
 
-    private ResponseCookie buildRefreshTokenCookie(String tokenValue, boolean isSecureRequest) {
+    @PostMapping("/logout")
+    @Operation(summary = "Đăng xuất và thu hồi phiên hiện tại")
+    public ResponseEntity<ApiSuccessResponse<Void>> logout(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            HttpServletRequest servletRequest
+    ) {
+        String rawRefreshToken = extractRefreshTokenCookie(servletRequest);
+        authService.logout(authorizationHeader, rawRefreshToken);
+
+        ResponseCookie clearCookie = buildRefreshTokenCookie("", 0, servletRequest.isSecure());
+
+        return ResponseEntity
+                .ok()
+                .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+                .body(ApiSuccessResponse.success("Đăng xuất thành công", null));
+    }
+
+    private ResponseCookie buildRefreshTokenCookie(String tokenValue, long maxAgeSeconds, boolean isSecureRequest) {
         return ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, tokenValue)
                 .httpOnly(true)
                 .secure(isSecureRequest)
                 .sameSite("Lax")
                 .path("/api/v1/auth")
-                .maxAge(jwtUtil.getRefreshTokenExpirationSeconds())
+                .maxAge(maxAgeSeconds)
                 .build();
     }
 
