@@ -3,11 +3,10 @@ import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { DashboardSidebar } from '../components/common/DashboardSidebar.jsx';
 import { DashboardHeader } from '../components/common/DashboardHeader.jsx';
-import { DemoAccountSwitcher } from '../components/common/DemoAccountSwitcher.jsx';
 import { ROUTES } from '../constants/routes.js';
 
 export function AdminLayout() {
-  const { user, isAuthenticated, isAdmin, loading } = useAuth();
+  const { isAuthenticated, isAdmin, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (loading) {
@@ -36,13 +35,10 @@ export function AdminLayout() {
           title="Bảng điều khiển Quản trị viên (Admin)"
         />
 
-        <main style={{ flex: 1, padding: '24px', overflowY: 'auto', paddingBottom: '90px' }}>
+        <main style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
           <Outlet />
         </main>
       </div>
-
-      <DemoAccountSwitcher />
     </div>
   );
 }
-

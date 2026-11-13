@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import { Outlet, Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { DashboardSidebar } from '../components/common/DashboardSidebar.jsx';
 import { DashboardHeader } from '../components/common/DashboardHeader.jsx';
-import { DemoAccountSwitcher } from '../components/common/DemoAccountSwitcher.jsx';
 import { ROUTES } from '../constants/routes.js';
-import { Clock, AlertCircle, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Clock, ArrowLeft } from 'lucide-react';
 
 export function OwnerLayout() {
   const { user, isAuthenticated, isOwner, isOwnerPending, loading } = useAuth();
@@ -65,7 +63,6 @@ export function OwnerLayout() {
               <ul style={{ paddingLeft: '20px', listStyleType: 'disc', color: 'var(--sb-text-secondary)' }}>
                 <li>Trạng thái hồ sơ: <span style={{ color: 'var(--sb-warning)', fontWeight: 600 }}>CHỜ DUYỆT (PENDING)</span></li>
                 <li>Thời gian dự kiến xử lý: trong vòng 24 - 48 giờ làm việc</li>
-                <li>Mẹo demo: Bạn có thể chuyển sang tài khoản <strong>Admin</strong> bằng thanh Demo Switcher bên dưới để duyệt hồ sơ này ngay lập tức!</li>
               </ul>
             </div>
 
@@ -76,7 +73,6 @@ export function OwnerLayout() {
             </div>
           </div>
         </div>
-        <DemoAccountSwitcher />
       </div>
     );
   }
@@ -100,13 +96,10 @@ export function OwnerLayout() {
           title="Cổng quản lý Chủ sân (Owner Portal)"
         />
 
-        <main style={{ flex: 1, padding: '24px', overflowY: 'auto', paddingBottom: '90px' }}>
+        <main style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
           <Outlet />
         </main>
       </div>
-
-      <DemoAccountSwitcher />
     </div>
   );
 }
-

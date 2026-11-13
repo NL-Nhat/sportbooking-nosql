@@ -24,8 +24,8 @@ import java.time.Instant;
 @AllArgsConstructor
 @Document(collection = "favorites")
 @CompoundIndexes({
-    @CompoundIndex(name = "idx_favorites_user_target_unique", def = "{'userId': 1, 'targetType': 1, 'targetId': 1}", unique = true),
-    @CompoundIndex(name = "idx_favorites_user_created", def = "{'userId': 1, 'createdAt': -1}")
+    @CompoundIndex(def = "{'userId': 1, 'targetType': 1, 'targetId': 1}", unique = true),
+    @CompoundIndex(def = "{'userId': 1, 'createdAt': -1}")
 })
 public class Favorite {
 

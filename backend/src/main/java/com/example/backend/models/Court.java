@@ -28,8 +28,8 @@ import java.util.Map;
 @AllArgsConstructor
 @Document(collection = "courts")
 @CompoundIndexes({
-    @CompoundIndex(name = "idx_courts_facility_status", def = "{'facilityId': 1, 'status': 1}"),
-    @CompoundIndex(name = "idx_courts_category_status", def = "{'categoryId': 1, 'status': 1}")
+    @CompoundIndex(def = "{'facilityId': 1, 'status': 1}"),
+    @CompoundIndex(def = "{'categoryId': 1, 'status': 1}")
 })
 public class Court {
 

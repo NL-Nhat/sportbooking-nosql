@@ -24,7 +24,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "users")
-@CompoundIndex(name = "idx_users_roles_status", def = "{'roles': 1, 'status': 1}")
+@CompoundIndex(def = "{'roles': 1, 'status': 1}")
 public class User {
 
     @Id

@@ -28,8 +28,8 @@ import java.util.List;
 @AllArgsConstructor
 @Document(collection = "owner_applications")
 @CompoundIndexes({
-    @CompoundIndex(name = "idx_owner_apps_user_status", def = "{'userId': 1, 'status': 1}"),
-    @CompoundIndex(name = "idx_owner_apps_status_created", def = "{'status': 1, 'createdAt': -1}")
+    @CompoundIndex(def = "{'userId': 1, 'status': 1}"),
+    @CompoundIndex(def = "{'status': 1, 'createdAt': -1}")
 })
 public class OwnerApplication {
 

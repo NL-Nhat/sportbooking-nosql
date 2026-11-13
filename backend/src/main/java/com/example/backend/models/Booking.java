@@ -30,9 +30,9 @@ import java.util.List;
 @AllArgsConstructor
 @Document(collection = "bookings")
 @CompoundIndexes({
-    @CompoundIndex(name = "idx_bookings_customer_created", def = "{'customerId': 1, 'createdAt': -1}"),
-    @CompoundIndex(name = "idx_bookings_court_created", def = "{'courtId': 1, 'createdAt': -1}"),
-    @CompoundIndex(name = "idx_bookings_status_hold_expires", def = "{'status': 1, 'holdExpiresAt': 1}")
+    @CompoundIndex(def = "{'customerId': 1, 'createdAt': -1}"),
+    @CompoundIndex(def = "{'courtId': 1, 'createdAt': -1}"),
+    @CompoundIndex(def = "{'status': 1, 'holdExpiresAt': 1}")
 })
 public class Booking {
 

@@ -23,7 +23,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "auth_sessions")
-@CompoundIndex(name = "idx_auth_sessions_user_revoked", def = "{'userId': 1, 'revokedAt': 1}")
+@CompoundIndex(def = "{'userId': 1, 'revokedAt': 1}")
 public class AuthSession {
 
     @Id
