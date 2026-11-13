@@ -2,11 +2,11 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { userMockService } from '../../mock/services/userMockService.js';
 import { DEMO_ACCOUNTS } from '../../mock/fixtures/demoAccounts.js';
 import { USER_IDS } from '../../mock/fixtures/ids.js';
+import { authService } from '../services/authService.js';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  // Khởi tạo user: mặc định lấy Customer 1 hoặc lưu trong localStorage
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,6 +26,14 @@ export function AuthProvider({ children }) {
     initUser();
   }, [initUser]);
 
+  /**
+   * Đăng ký tài khoản mới kết nối trực tiếp tới Backend thật: POST /api/v1/auth/register
+   */
+  const register = async ({ fullName, email, password, phone }) => {
+    const response = await authService.register({ fullName, email, password, phone });
+    return response;
+  };
+
   const login = async (email, password) => {
     const user = await userMockService.login(email, password);
     setCurrentUser(user);
@@ -36,6 +44,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setCurrentUser(null);
     localStorage.removeItem('sb_active_user_id');
+    localStorage.removeItem('sb_access_token');
   };
 
   const switchAccount = async (roleKey) => {
@@ -59,6 +68,7 @@ export function AuthProvider({ children }) {
     user: currentUser,
     currentUser,
     loading,
+    register,
     login,
     logout,
     switchAccount,
@@ -78,4 +88,3 @@ export function useAuth() {
   if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
   return ctx;
 }
-

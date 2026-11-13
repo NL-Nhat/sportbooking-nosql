@@ -26,8 +26,8 @@ import java.time.Instant;
 @AllArgsConstructor
 @Document(collection = "payments")
 @CompoundIndexes({
-    @CompoundIndex(name = "idx_payments_booking_created", def = "{'bookingId': 1, 'createdAt': -1}"),
-    @CompoundIndex(name = "idx_payments_customer_created", def = "{'customerId': 1, 'createdAt': -1}")
+    @CompoundIndex(def = "{'bookingId': 1, 'createdAt': -1}"),
+    @CompoundIndex(def = "{'customerId': 1, 'createdAt': -1}")
 })
 public class Payment {
 

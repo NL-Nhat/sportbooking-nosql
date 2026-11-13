@@ -22,7 +22,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "blocked_slots")
-@CompoundIndex(name = "idx_blocked_slots_court_time", def = "{'courtId': 1, 'startAt': 1, 'endAt': 1}")
+@CompoundIndex(def = "{'courtId': 1, 'startAt': 1, 'endAt': 1}")
 public class BlockedSlot {
 
     @Id

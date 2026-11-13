@@ -25,7 +25,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "booking_slots")
-@CompoundIndex(name = "idx_booking_slots_status_expires", def = "{'status': 1, 'expiresAt': 1}")
+@CompoundIndex(def = "{'status': 1, 'expiresAt': 1}")
 public class BookingSlot {
 
     @Id

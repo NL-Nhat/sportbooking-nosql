@@ -22,7 +22,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "notifications")
-@CompoundIndex(name = "idx_notifications_user_read_created", def = "{'userId': 1, 'isRead': 1, 'createdAt': -1}")
+@CompoundIndex(def = "{'userId': 1, 'isRead': 1, 'createdAt': -1}")
 public class Notification {
 
     @Id

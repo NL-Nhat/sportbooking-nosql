@@ -25,10 +25,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "price_rules")
-@CompoundIndex(
-    name = "idx_price_rules_court_status_valid",
-    def = "{'courtId': 1, 'status': 1, 'validFrom': 1, 'validTo': 1}"
-)
+@CompoundIndex(def = "{'courtId': 1, 'status': 1, 'validFrom': 1, 'validTo': 1}")
 public class PriceRule {
 
     @Id

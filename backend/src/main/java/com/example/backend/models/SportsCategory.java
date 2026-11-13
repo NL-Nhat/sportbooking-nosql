@@ -22,7 +22,7 @@ import java.time.Instant;
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "sports_categories")
-@CompoundIndex(name = "idx_categories_status_name", def = "{'status': 1, 'name': 1}")
+@CompoundIndex(def = "{'status': 1, 'name': 1}")
 public class SportsCategory {
 
     @Id

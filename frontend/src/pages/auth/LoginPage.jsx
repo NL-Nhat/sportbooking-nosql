@@ -11,8 +11,9 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [email, setEmail] = useState('customer@sportbooking.demo');
-  const [password, setPassword] = useState('Demo@123');
+  const registeredEmail = location.state?.registeredEmail || '';
+  const [email, setEmail] = useState(registeredEmail || '');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

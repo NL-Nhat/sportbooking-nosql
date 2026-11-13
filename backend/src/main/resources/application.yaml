@@ -4,11 +4,14 @@ server:
 spring:
   application:
     name: sportbooking-backend
+  mongodb:
+    uri: ${MONGODB_URI:mongodb://localhost:27017/sportbooking_db}
+    database: ${MONGODB_DATABASE:sportbooking_db}
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/sportbooking_db}
       database: ${MONGODB_DATABASE:sportbooking_db}
-      auto-index-creation: true
+      auto-index-creation: false
   servlet:
     multipart:
       max-file-size: 5MB

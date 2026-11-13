@@ -27,9 +27,9 @@ import java.util.List;
 @AllArgsConstructor
 @Document(collection = "complaints")
 @CompoundIndexes({
-    @CompoundIndex(name = "idx_complaints_user_created", def = "{'userId': 1, 'createdAt': -1}"),
-    @CompoundIndex(name = "idx_complaints_facility_status", def = "{'facilityId': 1, 'status': 1}"),
-    @CompoundIndex(name = "idx_complaints_status_created", def = "{'status': 1, 'createdAt': -1}")
+    @CompoundIndex(def = "{'userId': 1, 'createdAt': -1}"),
+    @CompoundIndex(def = "{'facilityId': 1, 'status': 1}"),
+    @CompoundIndex(def = "{'status': 1, 'createdAt': -1}")
 })
 public class Complaint {
 
