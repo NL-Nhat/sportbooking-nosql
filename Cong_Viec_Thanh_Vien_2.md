@@ -1,249 +1,235 @@
 # PHÂN CÔNG CÔNG VIỆC — THÀNH VIÊN 2
-## PHÂN HỆ: LỊCH TRỐNG, ĐẶT SÂN, GIỮ CHỖ (HOLD), THANH TOÁN, ĐÁNH GIÁ, KHIẾU NẠI, YÊU THÍCH & THÔNG BÁO
+## PHÂN HỆ: CHỦ SÂN (OWNER) & QUẢN TRỊ VIÊN (ADMIN)
 
 **Dự án:** Hệ thống Đặt sân Thể thao Trực tuyến (SportBooking)  
-**Phạm vi sở hữu độc lập:** **8 / 16 Collections** · **21 Chức năng chính** · **77 Chức năng nhỏ (Micro-features)**  
-**Các Collections phụ trách:** `blocked_slots`, `booking_slots`, `bookings`, `payments`, `reviews`, `complaints`, `favorites`, `notifications`
+**Vai trò phụ trách chính:** **Chủ sân (`OWNER`)** + **Quản trị viên (`ADMIN`)**  
+**Các chức năng độc lập đã chuyển sang cho Thành viên 1 làm bớt để cân bằng khối lượng:**
+1. *Quản lý Hồ sơ cá nhân, Upload Avatar & Đổi mật khẩu dùng chung* (`/owner/profile`, `/account/profile`) -> **Thành viên 1 đã nhận làm**.
+2. *Hệ thống Chuông Thông báo (`notifications`)* -> **Thành viên 1 đã nhận làm**.
+3. *Tác vụ tự động giải phóng chỗ giữ quá hạn 1 giờ (`HOLD -> EXPIRED`)* -> **Thành viên 1 đã nhận làm**.
 
 ---
 
-## NGUYÊN TẮC LÀM VIỆC ĐỘC LẬP (KHÔNG CHỜ ĐỢI THÀNH VIÊN 1)
-1. **Không cần chờ Thành viên 1 tạo Sân hay Cơ sở:** Trong database `sportbooking_db` đã có sẵn đầy đủ dữ liệu mẫu của `users`, `facilities`, `courts`, `operating_hours`, `price_rules` (từ `HuongdantaoDB.md`) và toàn bộ 16 Models Java đã được khởi tạo sẵn trong Backend. Thành viên 2 có thể dùng trực tiếp `courtId`, `facilityId`, `userId` trong DB để code và test ngay lập tức từ Bước 1!
-2. **Không xung đột code (Zero Merge Conflict):** Thành viên 2 làm việc riêng trên các Controllers, Services, Repositories, DTOs của 8 bảng (`blocked_slots`, `booking_slots`, `bookings`, `payments`, `reviews`, `complaints`, `favorites`, `notifications`). Không đụng vào các file `User`, `OwnerApplication`, `SportsCategory`, `Facility`, `Court`, `OperatingHours`, `PriceRule` của Thành viên 1.
-3. **Luồng nghiệp vụ khép kín:** Thành viên 2 nắm trọn vẹn luồng **Giao dịch Đặt sân & Tương tác Khách hàng**: *Chủ sân khóa giờ bảo trì (`blocked_slots`) -> Kiểm tra khung giờ trống (`booking_slots`) -> Khách chọn nhiều khung giờ & Giữ chỗ 1 giờ (`HOLD`) -> Thanh toán 100% hoặc Đặt cọc 20% (`payments`) -> Hủy lịch trước 24h & Hoàn tiền -> Chủ sân quản lý đơn đặt sân, Lịch trực quan & Doanh thu -> Khách viết Đánh giá (`reviews`) & Gửi Khiếu nại (`complaints`) -> Lưu Yêu thích (`favorites`) & Nhận Thông báo (`notifications`)*.
+## 1. TỔNG QUAN PHẠM VI CỦA THÀNH VIÊN 2
+
+| Nhóm người dùng / Phân hệ | Các chức năng chính Thành viên 2 đảm nhận | Giao diện Frontend (`route`) |
+| :--- | :--- | :--- |
+| **1. Quản trị viên (`ADMIN`)** | - Quản lý Danh mục Môn thể thao: Thêm, Sửa, Ẩn/Hiện (`sports_categories`)<br>- Xét duyệt / Từ chối Hồ sơ đăng ký Chủ sân & Cấp quyền `OWNER` (`owner_applications`, `users`)<br>- Quản lý Danh sách Người dùng & Khóa / Mở khóa tài khoản (`users`, `auth_sessions`)<br>- Kiểm duyệt & Ẩn / Hiện các Đánh giá vi phạm (`reviews`)<br>- Phân xử & Giải quyết Khiếu nại giữa Khách hàng và Chủ sân (`complaints`)<br>- Dashboard Thống kê Tổng quan Admin & Cài đặt hệ thống | `/admin`, `/admin/categories`, `/admin/owner-applications`, `/admin/owner-applications/:id`, `/admin/users`, `/admin/reviews`, `/admin/complaints`, `/admin/complaints/:id`, `/admin/settings` |
+| **2. Chủ sân (`OWNER`)** | - Quản lý Cơ sở thể thao: Thêm, Sửa, Đổi trạng thái (`facilities`)<br>- Quản lý Sân thể thao & Thiết lập Khung giờ cho thuê mẫu (`courts`, `operating_hours`)<br>- Quản lý chuyên sâu Lịch hoạt động theo từng Sân (`operating_hours`)<br>- Quản lý Quy tắc Giá động theo Thứ / Ngày cụ thể / Khung giờ (`price_rules`)<br>- Quản lý Lịch chặn sân / Khóa giờ bảo trì (`blocked_slots`)<br>- Xem Lịch biểu Đặt sân Trực quan theo Cơ sở & Ngày (`/owner/calendar`)<br>- Quản lý Đơn đặt sân tại cơ sở, Thu 80% tiền còn lại tại sân & Đánh dấu Hoàn thành (`bookings`, `payments`)<br>- Phản hồi Đánh giá của khách (`reviews`) & Giải trình Khiếu nại (`complaints`)<br>- Thống kê Doanh thu, Báo cáo tài chính & Dashboard Chủ sân | `/owner`, `/owner/facilities`, `/owner/facilities/new`, `/owner/facilities/:id/edit`, `/owner/courts`, `/owner/courts/new`, `/owner/courts/:id/edit`, `/owner/operating-hours`, `/owner/pricing`, `/owner/pricing/new`, `/owner/blocked-slots`, `/owner/calendar`, `/owner/bookings`, `/owner/bookings/:id`, `/owner/reviews`, `/owner/complaints`, `/owner/revenue` |
+
+> **Làm việc độc lập không cần chờ Thành viên 1:** Trong database `sportbooking_db` đã có sẵn đầy đủ dữ liệu mẫu của `users`, `owner_applications`, `bookings`, `booking_slots`, `payments`, `reviews`, `complaints` (từ `HuongdantaoDB.md`), nên Thành viên 2 có thể code và test ngay toàn bộ chức năng Duyệt hồ sơ, Quản lý sân, Quản lý đơn đặt sân, Doanh thu, Phản hồi đánh giá/khiếu nại mà **không cần đợi** Thành viên 1.
 
 ---
 
-# PHẦN I: DANH SÁCH CÁC CHỨC NĂNG CHÍNH CẦN LÀM TRƯỚC (THEO THỨ TỰ THỰC HIỆN)
+# PHẦN I: LỘ TRÌNH CÁC CHỨC NĂNG CHÍNH CẦN LÀM TRƯỚC — LÀM SAU
 
-> **Quy tắc thứ tự:** Làm chức năng Kiểm tra lịch trống & Chặn lịch trước -> làm luồng Giữ chỗ (`HOLD`) & Đặt sân -> làm luồng Thanh toán (Cọc 20% / 100%) & Hủy lịch -> làm phần Quản lý Booking / Lịch biểu / Doanh thu của Chủ sân -> sau khi đơn `COMPLETED` mới làm Đánh giá & Khiếu nại -> cuối cùng làm Yêu thích, Thông báo & Tổng quan tài khoản.
+> **Thứ tự thực hiện:** Làm các chức năng nền tảng của **Admin** (Danh mục môn thể thao -> Duyệt Chủ sân -> Quản lý User) trước -> tiếp theo làm luồng thiết lập của **Chủ sân** (Tạo Cơ sở -> Tạo Sân & Khung giờ -> Tạo Quy tắc giá -> Khóa lịch bảo trì) -> sau đó làm luồng vận hành của **Chủ sân** (Quản lý Đơn đặt sân -> Lịch biểu -> Doanh thu -> Phản hồi Đánh giá/Khiếu nại) -> cuối cùng hoàn thiện **Admin Kiểm duyệt Đánh giá, Phân xử Khiếu nại & Dashboard Admin**.
 
-| Thứ tự | Mã | Chức năng chính (Major Feature) | Vai trò | Collection chính | Trang Frontend kết nối |
-| :--: | :--: | :--- | :---: | :--- | :--- |
-| **Bước 1** | **M2-01** | **Chủ sân Quản lý Lịch chặn sân / Khóa giờ bảo trì** | Owner | `blocked_slots` | `/owner/blocked-slots` |
-| **Bước 2** | **M2-02** | **Kiểm tra & Hiển thị Bảng Khung giờ trống của Sân theo Ngày** | Guest / Customer | `booking_slots`, `blocked_slots`, `operating_hours`, `price_rules` | `/courts/:id` (Khu vực chọn khung giờ) |
-| **Bước 3** | **M2-03** | **Khách hàng Nhập thông tin & Tạo đơn Giữ chỗ 1 giờ (`HOLD`)** | Customer | `bookings`, `booking_slots` | `/checkout/:courtId` |
-| **Bước 4** | **M2-04** | **Khách hàng Thanh toán 100% hoặc Đặt cọc 20% & Xác nhận Đơn** | Customer | `payments`, `bookings`, `booking_slots` | `/payment/:bookingId`, `/payment-result/:bookingId` |
-| **Bước 5** | **M2-05** | **Khách hàng Xem Lịch sử Đặt sân, Trả nốt 80% & Hủy lịch (Quy tắc 24h)** | Customer | `bookings`, `booking_slots`, `payments` | `/account/bookings`, `/account/bookings/:id` |
-| **Bước 6** | **M2-06** | **Tự động Giải phóng Chỗ giữ quá hạn 1 giờ (`HOLD` -> `EXPIRED`)** | System | `bookings`, `booking_slots` | Tác vụ tự động Backend + kiểm tra khi truy vấn |
-| **Bước 7** | **M2-07** | **Chủ sân Quản lý Đơn đặt sân, Thu tiền còn lại & Đánh dấu Hoàn thành** | Owner | `bookings`, `booking_slots`, `payments` | `/owner/bookings`, `/owner/bookings/:id` |
-| **Bước 8** | **M2-08** | **Chủ sân Xem Lịch biểu Đặt sân Trực quan (Ngày / Tuần)** | Owner | `bookings`, `booking_slots`, `blocked_slots` | `/owner/calendar` |
-| **Bước 9** | **M2-09** | **Chủ sân Thống kê Doanh thu, Báo cáo & Dashboard Chủ sân** | Owner | `payments`, `bookings` | `/owner/revenue`, `/owner` |
-| **Bước 10** | **M2-10** | **Luồng Đánh giá Sân: Khách đánh giá -> Chủ sân phản hồi -> Admin kiểm duyệt** | Customer / Owner / Admin | `reviews`, `facilities`, `bookings` | `/account/reviews/new/:bookingId`, `/account/reviews`, `/owner/reviews`, `/admin/reviews` |
-| **Bước 11** | **M2-11** | **Luồng Khiếu nại: Khách gửi khiếu nại -> Chủ sân giải trình -> Admin phân xử** | Customer / Owner / Admin | `complaints`, `bookings` | `/account/complaints/new`, `/account/complaints`, `/account/complaints/:id`, `/owner/complaints`, `/admin/complaints`, `/admin/complaints/:id` |
-| **Bước 12** | **M2-12** | **Khách hàng Quản lý Danh sách Cơ sở & Sân Yêu thích** | Customer | `favorites` | `/account/favorites`, `/facilities/:id`, `/courts/:id` |
-| **Bước 13** | **M2-13** | **Hệ thống Thông báo & Trang Tổng quan Tài khoản Khách hàng** | Customer | `notifications`, `bookings`, `favorites` | `/account/notifications`, `/account`, Header Bell Badge |
-
----
-
-# PHẦN II: CHI TIẾT CÁC CHỨC NĂNG NHỎ (MICRO-FEATURES) THEO ĐÚNG THỨ TỰ LÀM TRƯỚC - LÀM SAU
-
-Dưới đây là danh sách toàn bộ các chức năng nhỏ nhất được sắp xếp theo đúng trình tự triển khai từ **Bước 1 đến Bước 13**:
+| Thứ tự | Mã | Loại người dùng | Tên chức năng chính | Collection tác động | Trang Frontend |
+| :--: | :--: | :---: | :--- | :--- | :--- |
+| **Bước 1** | **TV2-01** | **Admin** | **Quản lý Danh mục Môn thể thao (Thêm, Sửa, Ẩn/Hiện)** | `sports_categories` | `/admin/categories` |
+| **Bước 2** | **TV2-02** | **Admin** | **Xét duyệt / Từ chối Hồ sơ đăng ký Chủ sân & Cấp quyền `OWNER`** | `owner_applications`, `users` | `/admin/owner-applications`, `/admin/owner-applications/:id` |
+| **Bước 3** | **TV2-03** | **Admin** | **Quản lý Danh sách Người dùng & Khóa / Mở khóa Tài khoản** | `users`, `auth_sessions` | `/admin/users` |
+| **Bước 4** | **TV2-04** | **Chủ sân (`OWNER`)** | **Quản lý Cơ sở thể thao (Thêm, Sửa, Ẩn/Hiện Cơ sở)** | `facilities` | `/owner/facilities`, `/owner/facilities/new`, `/owner/facilities/:id/edit` |
+| **Bước 5** | **TV2-05** | **Chủ sân (`OWNER`)** | **Quản lý Sân thể thao & Thiết lập Khung giờ cho thuê mẫu (`timeSlots`)** | `courts`, `operating_hours` | `/owner/courts`, `/owner/courts/new`, `/owner/courts/:id/edit` |
+| **Bước 6** | **TV2-06** | **Chủ sân (`OWNER`)** | **Quản lý chuyên sâu Lịch hoạt động theo từng Sân** | `operating_hours` | `/owner/operating-hours` |
+| **Bước 7** | **TV2-07** | **Chủ sân (`OWNER`)** | **Quản lý Quy tắc Giá động (Theo Thứ / Ngày cụ thể / Khung giờ)** | `price_rules` | `/owner/pricing`, `/owner/pricing/new` |
+| **Bước 8** | **TV2-08** | **Chủ sân (`OWNER`)** | **Quản lý Lịch chặn sân / Khóa giờ bảo trì** | `blocked_slots`, `booking_slots` | `/owner/blocked-slots` |
+| **Bước 9** | **TV2-09** | **Chủ sân (`OWNER`)** | **Quản lý Đơn đặt sân tại cơ sở, Thu 80% tiền còn lại & Đánh dấu Hoàn thành** | `bookings`, `booking_slots`, `payments` | `/owner/bookings`, `/owner/bookings/:id` |
+| **Bước 10** | **TV2-10** | **Chủ sân (`OWNER`)** | **Xem Lịch biểu Đặt sân Trực quan & Thống kê Doanh thu / Dashboard Chủ sân** | `bookings`, `booking_slots`, `blocked_slots`, `payments` | `/owner/calendar`, `/owner/revenue`, `/owner` |
+| **Bước 11** | **TV2-11** | **Chủ sân + Admin** | **Chủ sân Phản hồi Đánh giá & Admin Kiểm duyệt / Ẩn-Hiện Đánh giá** | `reviews`, `facilities` | `/owner/reviews`, `/admin/reviews` |
+| **Bước 12** | **TV2-12** | **Chủ sân + Admin** | **Chủ sân Giải trình Khiếu nại & Admin Phân xử Khiếu nại** | `complaints` | `/owner/complaints`, `/admin/complaints`, `/admin/complaints/:id` |
+| **Bước 13** | **TV2-13** | **Admin** | **Dashboard Thống kê Tổng quan Admin & Cài đặt hệ thống** | `users`, `owner_applications`, `facilities`, `courts`, `bookings` | `/admin`, `/admin/settings` |
 
 ---
 
-## BƯỚC 1 (M2-01): Chủ sân Quản lý Lịch chặn sân / Khóa giờ bảo trì (`blocked_slots`)
-> *Làm đầu tiên vì dữ liệu `blocked_slots` được dùng trực tiếp để xác định khung giờ nào đang bị khóa khi hiển thị lịch trống cho khách.*
-
-- [ ] **1.1.** API Owner lấy danh sách lịch chặn sân (`GET /api/v1/owner/blocked-slots?courtId=...&date=...`):
-  - Kiểm tra sân thuộc quyền sở hữu của Owner, lọc theo sân và khoảng thời gian, sắp xếp theo `startAt` tăng dần.
-- [ ] **1.2.** API Owner tạo lịch chặn sân mới (`POST /api/v1/owner/blocked-slots`):
-  - Kiểm tra hợp lệ: `courtId`, `startAt`, `endAt` (`startAt < endAt`), `reason` bắt buộc (ví dụ: *"Bảo trì mặt cỏ"*, *"Giải đấu nội bộ"*).
-  - Kiểm tra xung đột: Không cho phép chặn khoảng giờ đã có khách đặt (`booking_slots` đang ở trạng thái `HOLD` hoặc `BOOKED` trong khoảng thời gian đó -> báo lỗi `409 Conflict`).
-  - Lưu vào collection `blocked_slots` với `createdBy = currentUser.id`.
-- [ ] **1.3.** API Owner xóa / mở khóa lịch chặn sân (`DELETE /api/v1/owner/blocked-slots/{id}`).
-- [ ] **1.4.** Kết nối Frontend trang Quản lý lịch chặn sân (`/owner/blocked-slots` — `OwnerBlockedSlotsPage.jsx`) với API thật, xóa mock data lịch chặn.
+# PHẦN II: DANH SÁCH CHI TIẾT CÁC CHỨC NĂNG NHỎ (THEO TỪNG LOẠI NGƯỜI DÙNG & THỨ TỰ LÀM)
 
 ---
 
-## BƯỚC 2 (M2-02): Kiểm tra & Hiển thị Bảng Khung giờ trống của Sân theo Ngày (`booking_slots`, `blocked_slots`)
-> *Cung cấp dữ liệu trạng thái thực tế của từng khung giờ trong ngày để khách hàng bấm chọn đặt sân.*
+## NHÓM 1 — PHÂN HỆ QUẢN TRỊ VIÊN (`ADMIN`): DANH MỤC, DUYỆT CHỦ SÂN & QUẢN LÝ USER
 
-- [ ] **2.1.** API Public lấy danh sách trạng thái các khung giờ của một sân theo ngày (`GET /api/v1/courts/{courtId}/availability?date=yyyy-MM-dd`):
-  - Đọc danh sách `timeSlots` mẫu trong ngày từ collection `operating_hours` của `courtId`.
-  - Đối chiếu từng khung giờ với `blocked_slots` và `booking_slots` (có `slotDate == date` và `status` thuộc `["HOLD", "BOOKED"]`, đồng thời bỏ qua các slot `HOLD` đã quá hạn `expiresAt < now`).
-  - Tính đơn giá của từng khung giờ theo `price_rules` của sân trong ngày `date`.
-  - Trả về danh sách các slot gồm: `startTime`, `endTime`, `startAt` (ISO-8601), `endAt` (ISO-8601), `slotLabel`, `price` (`BigDecimal`), và `availabilityStatus` (`AVAILABLE`, `HOLD`, `BOOKED`, `BLOCKED`).
-- [ ] **2.2.** Kết nối khu vực chọn ngày & bảng chọn nhiều khung giờ trên trang Chi tiết sân (`/courts/:id` — `CourtDetailPage.jsx`) với API thật ở mục 2.1.
+### Bước 1 (`TV2-01`): [ADMIN] Quản lý Danh mục Môn thể thao (`sports_categories`)
+> *Làm đầu tiên vì mỗi Sân thể thao khi tạo mới đều phải chọn một Danh mục môn thể thao từ bảng này.*
 
----
-
-## BƯỚC 3 (M2-03): Khách hàng Nhập thông tin & Tạo đơn Giữ chỗ 1 giờ — `HOLD` (`bookings`, `booking_slots`)
-> *Trái tim của luồng đặt sân: Khi khách chọn các khung giờ và bấm "Đến thanh toán", hệ thống tạo đơn ở trạng thái Giữ chỗ (`HOLD`) trong 1 giờ.*
-
-- [ ] **3.1.** Kiểm tra trên trang `/checkout/:courtId` (`CheckoutPage.jsx`):
-  - Hiển thị danh sách nhiều khung giờ khách đã chọn (`items`), tự động điền sẵn Họ tên và Số điện thoại người đặt từ tài khoản đang đăng nhập.
-  - Ở bước này chỉ nhập thông tin cá nhân & ghi chú (`note`), chưa chọn phương thức thanh toán (phần chọn Thanh toán 100% hay Đặt cọc 20% nằm ở màn hình Thanh toán tiếp theo).
-- [ ] **3.2.** API Khách hàng tạo đơn đặt sân và giữ chỗ (`POST /api/v1/bookings`):
-  - Yêu cầu đã đăng nhập (`CUSTOMER` / `OWNER`).
-  - Nhận `courtId`, `bookingDate` (`yyyy-MM-dd`), danh sách các khung giờ `slots` (`[{ startTime, endTime }]`), thông tin liên hệ (`contactName`, `contactPhone`), `note`.
-  - Tính lại giá từng khung giờ ở Backend từ `price_rules` (Backend là nguồn sự thật duy nhất về giá):
-    - Tính `subtotalAmount` = tổng `finalPrice` của tất cả các `items`.
-    - Tính `totalAmount = subtotalAmount`.
-    - Tính tiền cọc bắt buộc 20%: `depositRequired = totalAmount * 0.20` (làm tròn chuẩn `BigDecimal`).
-  - Thiết lập thời hạn giữ chỗ 1 giờ: `holdExpiresAt = Instant.now().plusSeconds(3600)`.
-  - **Chống đặt trùng lịch (Double-Booking Prevention)**:
-    - Tạo các bản ghi trong collection `booking_slots` cho từng khung giờ với `status = "HOLD"`, `expiresAt = holdExpiresAt`.
-    - Nếu bất kỳ khung giờ nào đã có người khác giữ chỗ (`HOLD`) hoặc đã đặt (`BOOKED`), Unique Partial Index `uniq_active_court_slot` trên `(courtId, slotDate, startAt)` sẽ chặn ngay và trả về lỗi `409 Conflict` (`"Khung giờ bạn chọn vừa có người khác đặt hoặc giữ chỗ"`).
-  - Lưu document `bookings` với:
-    - Mã đơn duy nhất `bookingCode` (ví dụ `SB-20261113-XXXX`).
-    - `status = "HOLD"`, `paymentOption = "DEPOSIT_20_PERCENT"`, `paymentStatus = "UNPAID"`, `paidAmount = 0`, `remainingAmount = totalAmount`, `holdExpiresAt`.
-- [ ] **3.3.** Kết nối nút *"Đến thanh toán"* trên `CheckoutPage.jsx` với API `POST /api/v1/bookings` và chuyển hướng sang `/payment/:bookingId`.
+- [ ] **1.1. API Admin lấy toàn bộ danh mục môn thể thao (`GET /api/v1/admin/categories`)**
+  - Hỗ trợ tìm kiếm theo tên/mã (`code`) và lọc theo trạng thái (`ACTIVE`, `INACTIVE`).
+- [ ] **1.2. API Admin thêm môn thể thao mới (`POST /api/v1/admin/categories`)**
+  - Kiểm tra quyền `ADMIN`.
+  - Chuẩn hóa `code` viết hoa (`FOOTBALL`, `BADMINTON`, `TENNIS`, `PICKLEBALL`, ...), kiểm tra trùng `code` (`409 Conflict`).
+  - Lưu `name`, `code`, `description`, `icon`, `status = "ACTIVE"`.
+- [ ] **1.3. API Admin cập nhật thông tin & đổi trạng thái Ẩn/Hiện môn thể thao (`PATCH /api/v1/admin/categories/{id}`)**
+- [ ] **1.4. Kết nối giao diện Frontend**
+  - Kết nối trang Quản lý danh mục của Admin (`/admin/categories` — `AdminCategoriesPage.jsx`) với API thật, xóa mock data.
 
 ---
 
-## BƯỚC 4 (M2-04): Khách hàng Thanh toán 100% hoặc Đặt cọc 20% & Xác nhận Đơn (`payments`, `bookings`, `booking_slots`)
-> *Hoàn tất thanh toán trong thời gian giữ chỗ 1 giờ để chuyển đơn từ `HOLD` sang `CONFIRMED` và khóa cứng lịch `BOOKED`.*
+### Bước 2 (`TV2-02`): [ADMIN] Xét duyệt / Từ chối Hồ sơ đăng ký Chủ sân (`owner_applications`, `users`)
+> *Xử lý các hồ sơ xin làm Chủ sân và tự động nâng quyền tài khoản lên `OWNER`.*
 
-- [ ] **4.1.** API lấy thông tin đơn đặt sân để thanh toán (`GET /api/v1/bookings/{id}`):
-  - Kiểm tra đơn thuộc về `currentUser.id`.
-  - Kiểm tra nếu đơn đang `HOLD` nhưng `holdExpiresAt < Instant.now()` thì tự động chuyển sang `EXPIRED`, giải phóng `booking_slots` sang `RELEASED` và thông báo đơn đã hết hạn giữ chỗ.
-- [ ] **4.2.** Giao diện màn hình Thanh toán (`/payment/:bookingId` — `PaymentPage.jsx`):
-  - Hiển thị đồng hồ đếm ngược thời gian giữ chỗ 1 giờ (`holdExpiresAt`).
-  - Chỉ hiển thị 2 lựa chọn thanh toán rõ ràng (không hiển thị phần chọn cổng/phương thức rườm rà):
-    1. **Thanh toán 100% (`FULL_PAYMENT`)**: Thanh toán toàn bộ `totalAmount`.
-    2. **Đặt cọc 20% (`DEPOSIT_20_PERCENT`)**: Thanh toán trước 20% (`depositRequired`), 80% còn lại thanh toán sau.
-- [ ] **4.3.** API xác nhận thanh toán đơn đặt sân (`POST /api/v1/bookings/{id}/payments`):
-  - Nhận lựa chọn `paymentOption` (`"FULL_PAYMENT"` hoặc `"DEPOSIT_20_PERCENT"`).
-  - Kiểm tra đơn đang ở trạng thái `HOLD` và chưa hết hạn `holdExpiresAt`.
-  - Xác định số tiền thanh toán:
-    - Nếu `"DEPOSIT_20_PERCENT"`: `amount = booking.depositRequired`, `paymentType = "DEPOSIT"`, cập nhật `booking.paidAmount = depositRequired`, `booking.remainingAmount = totalAmount - depositRequired`, `booking.paymentStatus = "PARTIALLY_PAID"`.
-    - Nếu `"FULL_PAYMENT"`: `amount = booking.totalAmount`, `paymentType = "FULL"`, cập nhật `booking.paidAmount = totalAmount`, `booking.remainingAmount = 0`, `booking.paymentStatus = "PAID"`.
-  - Cập nhật trạng thái đơn `booking.status = "CONFIRMED"`, `booking.confirmedAt = Instant.now()`.
-  - Cập nhật toàn bộ các slot của đơn trong `booking_slots`: chuyển `status` từ `"HOLD"` sang **`"BOOKED"`**, đặt `expiresAt = null`.
-  - Lưu bản ghi giao dịch vào collection `payments` (`bookingId`, `customerId`, `type`, `method = "ONLINE"`, `amount`, `status = "PAID"`, sinh mã `transactionCode` duy nhất, `paidAt = Instant.now()`).
-- [ ] **4.4.** Kết nối `PaymentPage.jsx` và trang Kết quả thanh toán (`/payment-result/:bookingId` — `PaymentResultPage.jsx`) với API thật.
+- [ ] **2.1. API Admin lấy danh sách hồ sơ đăng ký Chủ sân (`GET /api/v1/admin/owner-applications`)**
+  - Hỗ trợ lọc theo `status` (`PENDING`, `APPROVED`, `REJECTED`), tìm kiếm theo tên doanh nghiệp/SĐT, phân trang và đính kèm thông tin tóm tắt của `user` nộp đơn.
+- [ ] **2.2. API Admin xem chi tiết 1 hồ sơ đăng ký Chủ sân (`GET /api/v1/admin/owner-applications/{id}`)**
+  - Trả về đầy đủ thông tin doanh nghiệp, thông tin người nộp và hình ảnh giấy tờ xác minh (`identityCardUrl`, `businessLicenseUrl`).
+- [ ] **2.3. API Admin Phê duyệt hồ sơ Chủ sân (`POST /api/v1/admin/owner-applications/{id}/approve`)**
+  - Chỉ duyệt hồ sơ đang ở trạng thái `PENDING`.
+  - Cập nhật `owner_applications`: `status = "APPROVED"`, `reviewedBy = adminId`, `reviewedAt = Instant.now()`, `rejectionReason = null`.
+  - Cập nhật `users`: Thêm `"OWNER"` vào mảng `roles` (thành `["CUSTOMER", "OWNER"]`) và đặt `ownerStatus = "APPROVED"`.
+- [ ] **2.4. API Admin Từ chối hồ sơ Chủ sân (`POST /api/v1/admin/owner-applications/{id}/reject`)**
+  - Bắt buộc nhập lý do từ chối (`rejectionReason`).
+  - Cập nhật `owner_applications`: `status = "REJECTED"`, `reviewedBy = adminId`, `reviewedAt = Instant.now()`, lưu `rejectionReason`.
+  - Cập nhật `users.ownerStatus = "REJECTED"`.
+- [ ] **2.5. Kết nối giao diện Frontend**
+  - Kết nối 2 trang Admin (`/admin/owner-applications` và `/admin/owner-applications/:id`) với API thật.
 
 ---
 
-## BƯỚC 5 (M2-05): Khách hàng Xem Lịch sử Đặt sân, Trả nốt 80% & Hủy lịch trước 24h (`bookings`, `booking_slots`, `payments`)
-> *Giúp khách hàng quản lý các đơn đã đặt, thanh toán nốt phần còn lại hoặc hủy lịch theo quy tắc hoàn tiền 24 giờ.*
+### Bước 3 (`TV2-03`): [ADMIN] Quản lý Danh sách Người dùng & Khóa / Mở khóa Tài khoản (`users`, `auth_sessions`)
 
-- [ ] **5.1.** API lấy danh sách đơn đặt sân của tôi (`GET /api/v1/bookings/me`):
-  - Lọc theo `customerId == currentUser.id`, lọc theo `status` (`HOLD`, `CONFIRMED`, `COMPLETED`, `CANCELLED`, `EXPIRED`), tìm kiếm theo `bookingCode`, sắp xếp mới nhất lên đầu, phân trang.
-- [ ] **5.2.** API xem chi tiết đơn đặt sân kèm lịch sử các lần thanh toán (`GET /api/v1/bookings/{id}` + danh sách `payments` của `bookingId`).
-- [ ] **5.3.** API thanh toán phần tiền 80% còn lại (`POST /api/v1/bookings/{id}/pay-remaining`):
-  - Dành cho đơn đang có `paymentStatus == "PARTIALLY_PAID"` và `remainingAmount > 0`.
-  - Tạo bản ghi `payments` mới với `type = "REMAINING"`, `amount = booking.remainingAmount`, `status = "PAID"`.
-  - Cập nhật `booking.paidAmount = booking.totalAmount`, `booking.remainingAmount = 0`, `booking.paymentStatus = "PAID"`.
-- [ ] **5.4.** API Khách hàng hủy đơn đặt sân (`POST /api/v1/bookings/{id}/cancel`):
-  - Chỉ cho phép hủy khi đơn đang ở trạng thái `HOLD` hoặc `CONFIRMED`.
-  - Tìm thời điểm bắt đầu sớm nhất (`earliestStartAt`) trong danh sách `booking.items`.
-  - **Áp dụng quy tắc hoàn tiền 24 giờ**:
-    - Nếu thời điểm hủy cách `earliestStartAt` **>= 24 giờ** và `paidAmount > 0`: Đủ điều kiện hoàn tiền (`isRefundEligible = true`, `refundAmount = paidAmount`), tạo bản ghi `payments` với `type = "REFUND"`, `status = "REFUNDED"` và cập nhật `booking.paymentStatus = "REFUNDED"`.
-    - Nếu hủy **< 24 giờ** trước giờ chơi: Không hoàn lại tiền đã cọc (`isRefundEligible = false`, `refundAmount = 0`).
-  - Cập nhật `booking.status = "CANCELLED"`, `cancelledBy = "CUSTOMER"`, `cancelledAt = Instant.now()`, lưu `cancelReason`.
-  - **Giải phóng khung giờ ngay lập tức**: Cập nhật toàn bộ `booking_slots` của đơn sang `status = "RELEASED"` để khách khác có thể đặt lại khung giờ đó.
-- [ ] **5.5.** Kết nối Frontend trang Lịch sử đặt sân (`/account/bookings` — `BookingsPage.jsx`) và Chi tiết đơn đặt sân (`/account/bookings/:id` — `BookingDetailPage.jsx`) với API thật.
+- [ ] **3.1. API Admin lấy danh sách người dùng (`GET /api/v1/admin/users`)**
+  - Tìm kiếm theo từ khóa (`fullName`, `email`, `phone`), lọc theo vai trò (`CUSTOMER`, `OWNER`, `ADMIN`), lọc theo trạng thái (`ACTIVE`, `INACTIVE`, `BANNED`), phân trang.
+- [ ] **3.2. API Admin xem chi tiết người dùng (`GET /api/v1/admin/users/{id}`)**
+- [ ] **3.3. API Admin khóa hoặc mở khóa tài khoản (`PATCH /api/v1/admin/users/{id}/status`)**
+  - Không cho phép Admin tự khóa chính mình.
+  - Khi chuyển trạng thái sang `"BANNED"` hoặc `"INACTIVE"`, tự động thu hồi toàn bộ các phiên đăng nhập đang hoạt động của user đó trong `auth_sessions` (`revokedAt = Instant.now()`).
+- [ ] **3.4. Kết nối giao diện Frontend**
+  - Kết nối trang Quản lý người dùng (`/admin/users` — `AdminUsersPage.jsx`) với API thật.
 
 ---
 
-## BƯỚC 6 (M2-06): Tự động Giải phóng Chỗ giữ quá hạn 1 giờ (`HOLD` -> `EXPIRED`)
-> *Đảm bảo không có khung giờ nào bị kẹt ở trạng thái `HOLD` quá 60 phút nếu khách thoát trình duyệt không thanh toán.*
+## NHÓM 2 — PHÂN HỆ CHỦ SÂN (`OWNER`): THIẾT LẬP CƠ SỞ, SÂN, GIỜ MỞ CỬA, GIÁ & LỊCH CHẶN
 
-- [ ] **6.1.** Viết hàm quét tự động (`@Scheduled(fixedDelay = 60000)` chạy mỗi 60 giây hoặc chạy trước khi kiểm tra lịch trống):
-  - Tìm các đơn trong `bookings` có `status == "HOLD"` và `holdExpiresAt < Instant.now()`.
-  - Chuyển trạng thái các đơn đó sang `status = "EXPIRED"`.
-  - Chuyển toàn bộ các bản ghi tương ứng trong `booking_slots` từ `"HOLD"` sang `"EXPIRED"` (nhờ đó Partial Unique Index chỉ áp dụng cho `["HOLD", "BOOKED"]` sẽ tự động mở khóa khung giờ cho người mới đặt).
+### Bước 4 (`TV2-04`): [CHỦ SÂN] Quản lý Cơ sở thể thao (`facilities`)
+> *Chủ sân tạo Cơ sở thể thao của mình trước khi tạo các Sân con.*
+
+- [ ] **4.1. API Owner lấy danh sách cơ sở thuộc quyền sở hữu của mình (`GET /api/v1/owner/facilities`)**
+  - Chỉ trả về các cơ sở có `ownerId == currentUser.id`.
+  - Hỗ trợ tìm kiếm theo tên cơ sở và lọc theo trạng thái (`ACTIVE`, `INACTIVE`, `PENDING_APPROVAL`).
+- [ ] **4.2. API Owner tạo cơ sở thể thao mới (`POST /api/v1/owner/facilities`)**
+  - Validate dữ liệu: `name`, `description`, `address` (`street`, `ward`, `district`, `city`), tọa độ `location` (`type = "Point"`, `coordinates = [lng, lat]`), danh sách tiện ích `amenities`.
+  - Upload danh sách ảnh cơ sở (`images` với tên file kèm chuỗi định danh duy nhất).
+  - Gán `ownerId = currentUser.id`, `avgRating = 0.0`, `reviewCount = 0`, `status = "ACTIVE"`.
+- [ ] **4.3. API Owner xem chi tiết, cập nhật thông tin & đổi trạng thái hoạt động của cơ sở (`GET`, `PATCH /api/v1/owner/facilities/{id}`, `PATCH /api/v1/owner/facilities/{id}/status`)**
+- [ ] **4.4. Kết nối giao diện Frontend**
+  - Kết nối các trang `/owner/facilities`, `/owner/facilities/new`, `/owner/facilities/:id/edit` với API thật.
 
 ---
 
-## BƯỚC 7 (M2-07): Chủ sân Quản lý Đơn đặt sân, Thu tiền còn lại & Đánh dấu Hoàn thành (`bookings`, `payments`)
-> *Sau khi khách đặt sân, Chủ sân quản lý danh sách đơn của các cơ sở thuộc quyền sở hữu của mình.*
+### Bước 5 (`TV2-05`): [CHỦ SÂN] Quản lý Sân thể thao & Thiết lập Khung giờ cho thuê mẫu (`courts`, `operating_hours`)
+> *Khi tạo Sân mới, Chủ sân cấu hình luôn danh sách khung giờ cho thuê trong ngày (`timeSlots`) để áp dụng cho mọi ngày tiếp theo.*
 
-- [ ] **7.1.** API Owner lấy danh sách đơn đặt sân tại các cơ sở của mình (`GET /api/v1/owner/bookings`):
+- [ ] **5.1. API Owner lấy danh sách các sân thuộc quyền sở hữu của mình (`GET /api/v1/owner/courts`)**
+  - Lọc theo cơ sở (`facilityId`), môn thể thao (`categoryId`), trạng thái (`ACTIVE`, `MAINTENANCE`, `INACTIVE`), tìm kiếm theo tên sân.
+- [ ] **5.2. API Owner tạo sân mới kèm khung giờ cho thuê mẫu (`POST /api/v1/owner/courts`)**
+  - Kiểm tra `facilityId` thuộc quyền sở hữu của `currentUser.id` và `categoryId` đang `ACTIVE`.
+  - Lưu thông tin sân vào `courts`: `facilityId`, `categoryId`, `name`, `description`, `attributes` (`surface`, `size`, `indoor`, `lighting`), `capacity`, danh sách ảnh `images`, `status = "ACTIVE"`.
+  - **Lưu đồng thời cấu hình khung giờ cho thuê trong ngày vào `operating_hours`**:
+    - Nhận mảng `timeSlots` (ví dụ: `[{ startTime: "06:00", endTime: "07:00" }, { startTime: "14:00", endTime: "16:00" }]`).
+    - Kiểm tra định dạng giờ `HH:mm`, `startTime < endTime`, và không chồng lấn giờ trong cùng 1 ngày.
+    - Lưu vào `operating_hours` với `courtId` vừa tạo, `scheduleType = "DAILY"`, `status = "ACTIVE"`.
+- [ ] **5.3. API Owner xem chi tiết sân kèm `timeSlots`, cập nhật sân + khung giờ & đổi trạng thái sân (`GET`, `PATCH /api/v1/owner/courts/{id}`, `PATCH /api/v1/owner/courts/{id}/status`)**
+- [ ] **5.4. Kết nối giao diện Frontend**
+  - Kết nối các trang `/owner/courts`, `/owner/courts/new`, `/owner/courts/:id/edit` với API thật.
+
+---
+
+### Bước 6 (`TV2-06`): [CHỦ SÂN] Quản lý chuyên sâu Lịch hoạt động theo từng Sân (`operating_hours`)
+
+- [ ] **6.1. API lấy cấu hình lịch hoạt động của một sân (`GET /api/v1/owner/courts/{courtId}/operating-hours`)**
+- [ ] **6.2. API cập nhật cấu hình lịch hoạt động của sân (`PUT /api/v1/owner/courts/{courtId}/operating-hours`)**
+  - Cập nhật `effectiveFrom`, `effectiveTo`, `status` và danh sách `timeSlots` (kiểm tra không giao nhau).
+- [ ] **6.3. Kết nối giao diện Frontend**
+  - Kết nối trang Lịch hoạt động (`/owner/operating-hours` — `OwnerOperatingHoursPage.jsx`) với API thật.
+
+---
+
+### Bước 7 (`TV2-07`): [CHỦ SÂN] Quản lý Quy tắc Giá động (`price_rules`)
+
+- [ ] **7.1. API Owner lấy danh sách quy tắc giá theo sân (`GET /api/v1/owner/price-rules?courtId=...`)**
+  - Kiểm tra sân thuộc quyền sở hữu của Owner, lọc theo trạng thái (`ACTIVE`, `INACTIVE`), sắp xếp theo `priority` giảm dần.
+- [ ] **7.2. API Owner tạo quy tắc giá mới (`POST /api/v1/owner/price-rules`)**
+  - Validate dữ liệu: `courtId`, `name`, `startTime`, `endTime` (`startTime < endTime`), `pricePerSlot` (`BigDecimal` > 0), `daysOfWeek` (`1..7`), `specificDates` (`yyyy-MM-dd`), `validFrom`, `validTo`, `priority`.
+- [ ] **7.3. API Owner cập nhật, bật/tắt và xóa quy tắc giá (`PATCH /api/v1/owner/price-rules/{id}`, `DELETE /api/v1/owner/price-rules/{id}`)**
+- [ ] **7.4. Kết nối giao diện Frontend**
+  - Kết nối trang Danh sách quy tắc giá (`/owner/pricing`) và Form Tạo quy tắc giá (`/owner/pricing/new`) với API thật.
+
+---
+
+### Bước 8 (`TV2-08`): [CHỦ SÂN] Quản lý Lịch chặn sân / Khóa giờ bảo trì (`blocked_slots`)
+
+- [ ] **8.1. API Owner lấy danh sách lịch chặn sân (`GET /api/v1/owner/blocked-slots?courtId=...&date=...`)**
+- [ ] **8.2. API Owner tạo lịch chặn sân mới (`POST /api/v1/owner/blocked-slots`)**
+  - Kiểm tra `courtId`, `startAt < endAt`, `reason` bắt buộc (ví dụ: *"Bảo trì mặt cỏ"*, *"Giải đấu nội bộ"*).
+  - Kiểm tra không trùng với khung giờ đã có khách đặt (`booking_slots` đang `HOLD` hoặc `BOOKED` -> trả về lỗi `409 Conflict`).
+- [ ] **8.3. API Owner xóa / mở khóa lịch chặn sân (`DELETE /api/v1/owner/blocked-slots/{id}`)**
+- [ ] **8.4. Kết nối giao diện Frontend**
+  - Kết nối trang Quản lý lịch chặn sân (`/owner/blocked-slots` — `OwnerBlockedSlotsPage.jsx`) với API thật.
+
+---
+
+## NHÓM 3 — PHÂN HỆ CHỦ SÂN (`OWNER`): VẬN HÀNH ĐƠN ĐẶT SÂN, LỊCH BIỂU & DOANH THU
+
+### Bước 9 (`TV2-09`): [CHỦ SÂN] Quản lý Đơn đặt sân tại cơ sở, Thu 80% tiền còn lại & Đánh dấu Hoàn thành (`bookings`, `payments`)
+
+- [ ] **9.1. API Owner lấy danh sách đơn đặt sân tại các cơ sở của mình (`GET /api/v1/owner/bookings`)**
   - Chỉ lấy các đơn thuộc các `facilityId` do `currentUser.id` sở hữu.
   - Hỗ trợ lọc theo `facilityId`, `courtId`, ngày đặt (`bookingDate`), `paymentStatus` và tìm kiếm theo `bookingCode`, tên/SĐT khách đặt.
-- [ ] **7.2.** Giao diện Quản lý đặt sân của Chủ sân (`/owner/bookings` — `OwnerBookingsPage.jsx`):
-  - Hiển thị rõ ràng **danh sách các khung giờ đặt sân** của từng đơn (ví dụ: `12:00 - 13:00, 14:00 - 16:00`), không hiển thị cột trạng thái dư thừa theo đúng yêu cầu giao diện đã chỉnh sửa.
-- [ ] **7.3.** API Owner xác nhận đã thu phần tiền 80% còn lại tại sân (`POST /api/v1/owner/bookings/{id}/collect-remaining`):
-  - Tạo bản ghi `payments` với `type = "REMAINING"`, `method = "CASH"` (hoặc `"BANK_TRANSFER"`), `amount = remainingAmount`, `status = "PAID"`.
+- [ ] **9.2. Hiển thị danh sách khung giờ đặt sân trên trang Quản lý đặt sân (`/owner/bookings` — `OwnerBookingsPage.jsx`)**
+  - Hiển thị rõ ràng **danh sách các khung giờ đặt sân** của từng đơn (ví dụ: `12:00 - 13:00, 14:00 - 16:00`), giữ giao diện gọn gàng theo đúng thiết kế.
+- [ ] **9.3. API Owner xác nhận đã thu phần tiền 80% còn lại tại sân (`POST /api/v1/owner/bookings/{id}/collect-remaining`)**
+  - Tạo bản ghi `payments` với `type = "REMAINING"`, `method = "CASH"`, `amount = remainingAmount`, `status = "PAID"`.
   - Cập nhật `booking.paidAmount = totalAmount`, `booking.remainingAmount = 0`, `booking.paymentStatus = "PAID"`.
-- [ ] **7.4.** API Owner đánh dấu đơn đặt sân đã hoàn thành (`POST /api/v1/owner/bookings/{id}/complete`):
-  - Chuyển `booking.status = "COMPLETED"`, `completedAt = Instant.now()` (mở khóa điều kiện để khách hàng viết đánh giá sân).
-- [ ] **7.5.** API Owner hủy/từ chối đơn đặt sân (`POST /api/v1/owner/bookings/{id}/cancel`):
+- [ ] **9.4. API Owner đánh dấu đơn đặt sân đã hoàn thành (`POST /api/v1/owner/bookings/{id}/complete`)**
+  - Chuyển `booking.status = "COMPLETED"`, `completedAt = Instant.now()`.
+- [ ] **9.5. API Owner hủy/từ chối đơn đặt sân (`POST /api/v1/owner/bookings/{id}/cancel`)**
   - Cập nhật `status = "CANCELLED"`, `cancelledBy = "OWNER"`, giải phóng `booking_slots` sang `"RELEASED"`.
-- [ ] **7.6.** Kết nối Frontend 2 trang `/owner/bookings` (`OwnerBookingsPage.jsx`) và `/owner/bookings/:id` (`OwnerBookingDetailPage.jsx`) với API thật.
+- [ ] **9.6. Kết nối giao diện Frontend**
+  - Kết nối 2 trang `/owner/bookings` (`OwnerBookingsPage.jsx`) và `/owner/bookings/:id` (`OwnerBookingDetailPage.jsx`) với API thật.
 
 ---
 
-## BƯỚC 8 (M2-08): Chủ sân Xem Lịch biểu Đặt sân Trực quan (`bookings`, `booking_slots`, `blocked_slots`)
-> *Giúp Chủ sân theo dõi trực quan toàn bộ các khung giờ Trống / Đang giữ chỗ / Đã đặt / Đang bảo trì trên lưới lịch.*
+### Bước 10 (`TV2-10`): [CHỦ SÂN] Lịch biểu Đặt sân Trực quan, Thống kê Doanh thu & Dashboard Chủ sân (`bookings`, `payments`)
 
-- [ ] **8.1.** API Owner lấy dữ liệu lịch biểu theo cơ sở và ngày (`GET /api/v1/owner/calendar?facilityId=...&date=yyyy-MM-dd`):
+- [ ] **10.1. API Owner lấy dữ liệu lịch biểu trực quan theo cơ sở và ngày (`GET /api/v1/owner/calendar?facilityId=...&date=yyyy-MM-dd`)**
   - Trả về danh sách các sân thuộc cơ sở cùng toàn bộ `timeSlots`, các slot đang `HOLD` / `BOOKED` (kèm tên khách, SĐT, `bookingCode`) và các khoảng `blocked_slots`.
-- [ ] **8.2.** Kết nối Frontend trang Lịch biểu trực quan (`/owner/calendar` — `OwnerCalendarPage.jsx`) với API thật.
+- [ ] **10.2. API Owner thống kê doanh thu & báo cáo (`GET /api/v1/owner/revenue?from=...&to=...&facilityId=...`)**
+  - Tính tổng doanh thu đã thu (`paidAmount`), tổng tiền cọc đã nhận, tổng tiền còn phải thu (`remainingAmount`), tổng số tiền đã hoàn trả (`refundAmount`), thống kê theo cơ sở/sân.
+- [ ] **10.3. API Owner lấy số liệu tổng quan cho Dashboard Chủ sân (`GET /api/v1/owner/dashboard/summary`)**
+  - Tổng doanh thu tháng, tổng số đơn đặt sân, số lịch đặt sân hôm nay, danh sách đơn đặt sân mới nhất.
+- [ ] **10.4. Kết nối giao diện Frontend**
+  - Kết nối trang Lịch biểu (`/owner/calendar` — `OwnerCalendarPage.jsx`), trang Doanh thu (`/owner/revenue` — `OwnerRevenuePage.jsx`) và Dashboard Chủ sân (`/owner` — `OwnerDashboardPage.jsx`) với API thật.
 
 ---
 
-## BƯỚC 9 (M2-09): Chủ sân Thống kê Doanh thu, Báo cáo & Dashboard Chủ sân (`payments`, `bookings`)
-> *Tổng hợp số liệu tài chính từ các giao dịch `payments` và đơn đặt sân `bookings` của Chủ sân.*
+## NHÓM 4 — PHỐI HỢP CHỦ SÂN (`OWNER`) & QUẢN TRỊ VIÊN (`ADMIN`): ĐÁNH GIÁ, KHIẾU NẠI & TỔNG QUAN
 
-- [ ] **9.1.** API Owner thống kê doanh thu & báo cáo (`GET /api/v1/owner/revenue?from=...&to=...&facilityId=...`):
-  - Tính tổng doanh thu đã thu (`paidAmount`), tổng tiền cọc đã nhận, tổng tiền còn phải thu (`remainingAmount`), tổng số tiền đã hoàn trả (`refundAmount`).
-  - Thống kê doanh thu theo từng cơ sở, từng sân và danh sách các giao dịch thanh toán gần nhất.
-- [ ] **9.2.** API Owner lấy số liệu tổng quan cho Dashboard Chủ sân (`GET /api/v1/owner/dashboard/summary`):
-  - Tổng doanh thu tháng, tổng số đơn đặt sân, số lịch đặt sân hôm nay, danh sách các đơn đặt sân mới nhất.
-- [ ] **9.3.** Kết nối Frontend trang Doanh thu (`/owner/revenue` — `OwnerRevenuePage.jsx`) và Dashboard Chủ sân (`/owner` — `OwnerDashboardPage.jsx`) với API thật.
+### Bước 11 (`TV2-11`): [CHỦ SÂN & ADMIN] Phản hồi Đánh giá & Kiểm duyệt Đánh giá (`reviews`, `facilities`)
 
----
-
-## BƯỚC 10 (M2-10): Luồng Đánh giá Sân khép kín (`reviews`, `facilities`, `bookings`)
-> *Sau khi đơn đặt sân chuyển sang `COMPLETED` ở Bước 7, Khách hàng có thể đánh giá sân -> Chủ sân phản hồi -> Admin kiểm duyệt.*
-
-- [ ] **10.1.** API Khách hàng tạo đánh giá mới (`POST /api/v1/reviews`):
-  - Kiểm tra điều kiện: Đơn `bookingId` phải thuộc về `currentUser.id`, có `status == "COMPLETED"`, và chưa có bản ghi nào trong `reviews` có cùng `bookingId` (`409 Conflict` nếu đánh giá lại lần 2).
-  - Validate `rating` (số nguyên từ `1` đến `5`), `comment` (nội dung đánh giá), danh sách ảnh `images` (upload file kèm định danh).
-  - Lưu vào collection `reviews` với `status = "VISIBLE"`.
-  - **Tự động tính lại và cập nhật `avgRating` và `reviewCount`** của cơ sở (`facilities`) tương ứng.
-- [ ] **10.2.** API Public lấy danh sách đánh giá hiển thị của cơ sở/sân (`GET /api/v1/reviews?facilityId=...&courtId=...`):
-  - Chỉ trả về các đánh giá có `status == "VISIBLE"`.
-- [ ] **10.3.** API Khách hàng xem danh sách các đánh giá đã viết của mình (`GET /api/v1/reviews/me`).
-- [ ] **10.4.** API Chủ sân gửi phản hồi cho đánh giá của khách (`POST /api/v1/owner/reviews/{id}/reply`):
-  - Kiểm tra đánh giá thuộc cơ sở của Owner, cập nhật trường nhúng `ownerReply: { content, repliedAt: Instant.now() }`.
-- [ ] **10.5.** API Admin lấy danh sách toàn bộ đánh giá và ẩn/hiện đánh giá vi phạm (`GET /api/v1/admin/reviews` & `PATCH /api/v1/admin/reviews/{id}/status`):
-  - Khi Admin đổi trạng thái giữa `VISIBLE` và `HIDDEN`, tự động tính lại `avgRating` và `reviewCount` của cơ sở.
-- [ ] **10.6.** Kết nối cả 4 trang Frontend: Tạo đánh giá (`/account/reviews/new/:bookingId`), Đánh giá của tôi (`/account/reviews`), Quản lý đánh giá của Owner (`/owner/reviews`) và Kiểm duyệt đánh giá của Admin (`/admin/reviews`) với API thật.
+- [ ] **11.1. [Chủ sân] Xem danh sách đánh giá tại các cơ sở của mình & gửi phản hồi (`GET /api/v1/owner/reviews`, `POST /api/v1/owner/reviews/{id}/reply`)**
+  - Kiểm tra đánh giá thuộc cơ sở của Owner, cập nhật sub-document `ownerReply: { content, repliedAt: Instant.now() }`.
+- [ ] **11.2. [Admin] Xem toàn bộ đánh giá trên sàn & Ẩn/Hiện đánh giá vi phạm (`GET /api/v1/admin/reviews`, `PATCH /api/v1/admin/reviews/{id}/status`)**
+  - Khi Admin đổi trạng thái giữa `VISIBLE` và `HIDDEN`, tự động tính lại `avgRating` và `reviewCount` của cơ sở (`facilities`).
+- [ ] **11.3. Kết nối giao diện Frontend của Chủ sân & Admin**
+  - Kết nối trang Quản lý đánh giá của Chủ sân (`/owner/reviews` — `OwnerReviewsPage.jsx`) và Kiểm duyệt đánh giá của Admin (`/admin/reviews` — `AdminReviewsPage.jsx`) với API thật.
 
 ---
 
-## BƯỚC 11 (M2-11): Luồng Khiếu nại & Phân xử khép kín (`complaints`, `bookings`)
-> *Khách hàng gửi khiếu nại về đơn đặt sân -> Chủ sân gửi giải trình -> Admin ra quyết định xử lý.*
+### Bước 12 (`TV2-12`): [CHỦ SÂN & ADMIN] Giải trình Khiếu nại & Phân xử Khiếu nại (`complaints`)
 
-- [ ] **11.1.** API Khách hàng gửi khiếu nại mới (`POST /api/v1/complaints`):
-  - Kiểm tra `bookingId` thuộc về `currentUser.id`, lấy `facilityId` từ đơn đặt sân.
-  - Lưu `subject`, `content`, danh sách ảnh bằng chứng `images` (upload file kèm định danh), khởi tạo `status = "OPEN"`.
-- [ ] **11.2.** API Khách hàng xem danh sách khiếu nại của mình (`GET /api/v1/complaints/me`) và xem chi tiết khiếu nại (`GET /api/v1/complaints/{id}`).
-- [ ] **11.3.** API Chủ sân xem danh sách khiếu nại tại cơ sở của mình (`GET /api/v1/owner/complaints`) và gửi phản hồi giải trình (`POST /api/v1/owner/complaints/{id}/respond`):
-  - Lưu vào trường nhúng `ownerResponse: { respondedBy: currentUser.id, content, respondedAt: Instant.now() }`.
+- [ ] **12.1. [Chủ sân] Xem danh sách khiếu nại tại cơ sở của mình & gửi phản hồi giải trình (`GET /api/v1/owner/complaints`, `POST /api/v1/owner/complaints/{id}/respond`)**
+  - Lưu vào sub-document `ownerResponse: { respondedBy: currentUser.id, content, respondedAt: Instant.now() }`.
   - Nếu khiếu nại đang `OPEN` thì chuyển sang `IN_PROGRESS`.
-- [ ] **11.4.** API Admin xem toàn bộ khiếu nại trên sàn (`GET /api/v1/admin/complaints`) và cập nhật quyết định xử lý (`POST /api/v1/admin/complaints/{id}/resolve`):
-  - Lưu vào trường nhúng `adminResolution: { resolvedBy: adminId, decision, note, resolvedAt: Instant.now() }` và cập nhật `status` (`RESOLVED`, `REJECTED` hoặc `CLOSED`).
-- [ ] **11.5.** Kết nối toàn bộ 6 trang Khiếu nại trên Frontend (`/account/complaints`, `/account/complaints/new`, `/account/complaints/:id`, `/owner/complaints`, `/admin/complaints`, `/admin/complaints/:id`) với API thật.
+- [ ] **12.2. [Admin] Xem toàn bộ khiếu nại trên sàn & ra quyết định phân xử (`GET /api/v1/admin/complaints`, `POST /api/v1/admin/complaints/{id}/resolve`)**
+  - Lưu vào sub-document `adminResolution: { resolvedBy: adminId, decision, note, resolvedAt: Instant.now() }` và cập nhật `status` (`RESOLVED`, `REJECTED` hoặc `CLOSED`).
+- [ ] **12.3. Kết nối giao diện Frontend của Chủ sân & Admin**
+  - Kết nối `/owner/complaints` (`OwnerComplaintsPage.jsx`), `/admin/complaints` (`AdminComplaintsPage.jsx`) và `/admin/complaints/:id` (`AdminComplaintDetailPage.jsx`) với API thật.
 
 ---
 
-## BƯỚC 12 (M2-12): Khách hàng Quản lý Danh sách Cơ sở & Sân Yêu thích (`favorites`)
-> *Cho phép khách hàng lưu lại các cơ sở và sân thường chơi để đặt lịch nhanh.*
+### Bước 13 (`TV2-13`): [ADMIN] Dashboard Thống kê Tổng quan Admin & Cài đặt hệ thống
 
-- [ ] **12.1.** API lấy danh sách yêu thích của tôi (`GET /api/v1/favorites?targetType=FACILITY|COURT`):
-  - Trả về danh sách yêu thích của `currentUser.id` kèm thông tin chi tiết của Cơ sở (`facilities`) hoặc Sân (`courts`) tương ứng.
-- [ ] **12.2.** API thêm vào danh sách yêu thích (`POST /api/v1/favorites`):
-  - Nhận `targetType` (`"FACILITY"` hoặc `"COURT"`) và `targetId`.
-  - Đảm bảo không trùng lặp nhờ Unique Compound Index `(userId, targetType, targetId)`.
-- [ ] **12.3.** API xóa khỏi danh sách yêu thích (`DELETE /api/v1/favorites/{id}` hoặc theo `targetType` + `targetId`).
-- [ ] **12.4.** Kết nối Frontend trang Yêu thích (`/account/favorites` — `FavoritesPage.jsx`) và nút Trái tim trên trang Chi tiết cơ sở / Chi tiết sân với API thật.
-
----
-
-## BƯỚC 13 (M2-13): Hệ thống Thông báo & Trang Tổng quan Tài khoản Khách hàng (`notifications`)
-> *Bước hoàn thiện cuối cùng của Thành viên 2: Gửi thông báo tự động khi Đặt sân / Thanh toán / Khiếu nại và hiển thị trên Header + Trang thông báo.*
-
-- [ ] **13.1.** Viết hàm `NotificationService.createNotification(userId, type, title, body, referenceType, referenceId)` để tự động tạo thông báo trong collection `notifications` khi:
-  - Khách giữ chỗ / thanh toán đơn đặt sân thành công (`type = "BOOKING"` / `"PAYMENT"`).
-  - Đơn đặt sân bị hủy hoặc hoàn thành (`type = "BOOKING"`).
-  - Khiếu nại được Chủ sân phản hồi hoặc Admin giải quyết (`type = "COMPLAINT"`).
-- [ ] **13.2.** API lấy danh sách thông báo của người dùng hiện tại (`GET /api/v1/notifications`) và số lượng thông báo chưa đọc (`GET /api/v1/notifications/unread-count`).
-- [ ] **13.3.** API đánh dấu 1 thông báo là đã đọc (`PATCH /api/v1/notifications/{id}/read`) và đánh dấu tất cả là đã đọc (`POST /api/v1/notifications/read-all`).
-- [ ] **13.4.** Kết nối biểu tượng chuông thông báo trên `PublicHeader.jsx`, trang Thông báo (`/account/notifications` — `NotificationsPage.jsx`) và trang Tổng quan tài khoản (`/account` — `AccountOverviewPage.jsx`) với API thật, xóa `notificationMockService`.
-
+- [ ] **13.1. API Thống kê tổng quan cho Admin Dashboard (`GET /api/v1/admin/dashboard/summary`)**
+  - Đếm tổng số người dùng theo vai trò (`CUSTOMER`, `OWNER`, `ADMIN`), số tài khoản bị khóa (`BANNED`).
+  - Đếm số hồ sơ đăng ký Chủ sân đang chờ duyệt (`PENDING`), tổng số môn thể thao (`sports_categories`), cơ sở (`facilities`), sân (`courts`), tổng số đơn đặt sân (`bookings`) và khiếu nại chờ xử lý (`complaints`).
+- [ ] **13.2. Kết nối giao diện Frontend**
+  - Kết nối trang Admin Dashboard (`/admin` — `AdminDashboardPage.jsx`) và Cài đặt hệ thống (`/admin/settings` — `AdminSettingsPage.jsx`) với API thật.
