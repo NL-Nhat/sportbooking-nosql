@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ownerFacilityService } from '../../services/ownerFacilityService.js';
+import { useToast } from '../../contexts/ToastContext.jsx';
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
 import { resolveAssetUrl } from '../../utils/fileUploadHelper.js';
@@ -18,7 +19,10 @@ import {
   AlertCircle,
   RefreshCw,
   ExternalLink,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Power,
+  RotateCcw,
+  Send
 } from 'lucide-react';
 
 const AMENITY_LABELS = {
@@ -32,9 +36,11 @@ const AMENITY_LABELS = {
 
 export function OwnerFacilityDetailPage() {
   const { id } = useParams();
+  const { showToast } = useToast();
   const [facility, setFacility] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const fetchDetail = useCallback(async () => {
     if (!id) return;
@@ -53,6 +59,27 @@ export function OwnerFacilityDetailPage() {
   useEffect(() => {
     fetchDetail();
   }, [fetchDetail]);
+
+  const handleStatusChange = async (targetStatus) => {
+    if (!facility) return;
+    const facId = facility.id || facility._id;
+    setUpdatingStatus(true);
+    try {
+      const updated = await ownerFacilityService.updateFacilityStatus(facId, targetStatus);
+      setFacility(updated);
+      if (targetStatus === 'INACTIVE') {
+        showToast('Đã chuyển cơ sở sang trạng thái ngừng hoạt động (INACTIVE).', 'info');
+      } else if (targetStatus === 'APPROVED') {
+        showToast('Đã kích hoạt cơ sở hoạt động trở lại (APPROVED).', 'success');
+      } else if (targetStatus === 'PENDING') {
+        showToast('Đã gửi lại yêu cầu xét duyệt cơ sở cho Admin.', 'success');
+      }
+    } catch (err) {
+      showToast(err?.message || 'Không thể đổi trạng thái cơ sở.', 'error');
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -164,9 +191,42 @@ export function OwnerFacilityDetailPage() {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
             {facility.status === 'APPROVED' && (
-              <Link to={`/facilities/${facilityId}`} className="btn btn-secondary btn-sm">
-                <ExternalLink size={15} /> Xem trang công khai
-              </Link>
+              <>
+                <Link to={`/facilities/${facilityId}`} className="btn btn-secondary btn-sm">
+                  <ExternalLink size={15} /> Xem trang công khai
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange('INACTIVE')}
+                  disabled={updatingStatus}
+                  className="btn btn-secondary btn-sm"
+                  style={{ color: 'var(--sb-danger)' }}
+                >
+                  <Power size={15} /> {updatingStatus ? 'Đang xử lý...' : 'Tạm ngừng hoạt động'}
+                </button>
+              </>
+            )}
+            {facility.status === 'INACTIVE' && (
+              <button
+                type="button"
+                onClick={() => handleStatusChange('APPROVED')}
+                disabled={updatingStatus}
+                className="btn btn-secondary btn-sm"
+                style={{ color: 'var(--sb-success)' }}
+              >
+                <RotateCcw size={15} /> {updatingStatus ? 'Đang xử lý...' : 'Mở hoạt động trở lại'}
+              </button>
+            )}
+            {facility.status === 'REJECTED' && (
+              <button
+                type="button"
+                onClick={() => handleStatusChange('PENDING')}
+                disabled={updatingStatus}
+                className="btn btn-secondary btn-sm"
+                style={{ color: 'var(--sb-primary-700)' }}
+              >
+                <Send size={15} /> {updatingStatus ? 'Đang gửi...' : 'Gửi duyệt lại'}
+              </button>
             )}
             <Link to={`/owner/facilities/${facilityId}/edit`} className="btn btn-primary btn-sm">
               <Edit size={15} /> Chỉnh sửa cơ sở

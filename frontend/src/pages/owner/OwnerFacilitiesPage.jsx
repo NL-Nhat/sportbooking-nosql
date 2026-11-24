@@ -5,14 +5,17 @@ import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
 import { resolveAssetUrl } from '../../utils/fileUploadHelper.js';
 import { ROUTES } from '../../constants/routes.js';
-import { Plus, Building2, MapPin, Edit, Eye, Search, AlertCircle, RefreshCw } from 'lucide-react';
+import { useToast } from '../../contexts/ToastContext.jsx';
+import { Plus, Building2, MapPin, Edit, Eye, Search, AlertCircle, RefreshCw, Power, RotateCcw, Send } from 'lucide-react';
 
 export function OwnerFacilitiesPage() {
+  const { showToast } = useToast();
   const [facilities, setFacilities] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [togglingId, setTogglingId] = useState('');
 
   const fetchOwnerFacilities = useCallback(async (currentStatus = '') => {
     setLoading(true);
@@ -32,6 +35,28 @@ export function OwnerFacilitiesPage() {
   useEffect(() => {
     fetchOwnerFacilities(statusFilter);
   }, [fetchOwnerFacilities, statusFilter]);
+
+  const handleChangeStatus = async (facility, targetStatus) => {
+    const facId = facility.id || facility._id;
+    setTogglingId(facId);
+    try {
+      const updated = await ownerFacilityService.updateFacilityStatus(facId, targetStatus);
+      setFacilities((prev) =>
+        prev.map((item) => ((item.id || item._id) === facId ? { ...item, status: updated.status } : item))
+      );
+      if (targetStatus === 'INACTIVE') {
+        showToast(`Đã tạm ngừng hoạt động cơ sở "${facility.name}".`, 'info');
+      } else if (targetStatus === 'APPROVED') {
+        showToast(`Đã mở hoạt động trở lại cho cơ sở "${facility.name}".`, 'success');
+      } else if (targetStatus === 'PENDING') {
+        showToast(`Đã gửi lại yêu cầu xét duyệt cho cơ sở "${facility.name}".`, 'success');
+      }
+    } catch (err) {
+      showToast(err?.message || 'Không thể cập nhật trạng thái cơ sở.', 'error');
+    } finally {
+      setTogglingId('');
+    }
+  };
 
   const filtered = facilities.filter((f) => {
     const q = search.trim().toLowerCase();
@@ -190,7 +215,8 @@ export function OwnerFacilitiesPage() {
 
                   <div style={{
                     display: 'flex',
-                    gap: '10px',
+                    flexWrap: 'wrap',
+                    gap: '8px',
                     borderTop: '1px solid var(--sb-border)',
                     paddingTop: '16px'
                   }}>
@@ -200,6 +226,39 @@ export function OwnerFacilitiesPage() {
                     <Link to={`/owner/facilities/${facId}/edit`} className="btn btn-primary btn-sm" style={{ flex: 1 }}>
                       <Edit size={14} /> Chỉnh sửa
                     </Link>
+                    {fac.status === 'APPROVED' && (
+                      <button
+                        type="button"
+                        onClick={() => handleChangeStatus(fac, 'INACTIVE')}
+                        disabled={togglingId === facId}
+                        className="btn btn-secondary btn-sm"
+                        style={{ width: '100%', color: 'var(--sb-danger)' }}
+                      >
+                        <Power size={14} /> {togglingId === facId ? 'Đang xử lý...' : 'Tạm ngừng hoạt động'}
+                      </button>
+                    )}
+                    {fac.status === 'INACTIVE' && (
+                      <button
+                        type="button"
+                        onClick={() => handleChangeStatus(fac, 'APPROVED')}
+                        disabled={togglingId === facId}
+                        className="btn btn-secondary btn-sm"
+                        style={{ width: '100%', color: 'var(--sb-success)' }}
+                      >
+                        <RotateCcw size={14} /> {togglingId === facId ? 'Đang xử lý...' : 'Mở hoạt động trở lại'}
+                      </button>
+                    )}
+                    {fac.status === 'REJECTED' && (
+                      <button
+                        type="button"
+                        onClick={() => handleChangeStatus(fac, 'PENDING')}
+                        disabled={togglingId === facId}
+                        className="btn btn-secondary btn-sm"
+                        style={{ width: '100%', color: 'var(--sb-primary-700)' }}
+                      >
+                        <Send size={14} /> {togglingId === facId ? 'Đang gửi...' : 'Gửi yêu cầu xét duyệt lại'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

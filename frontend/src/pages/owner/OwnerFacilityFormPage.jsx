@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ownerFacilityService } from '../../services/ownerFacilityService.js';
-import { facilityMockService } from '../../../mock/services/facilityMockService.js';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import { uploadFileToServer, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
 import { ROUTES } from '../../constants/routes.js';
@@ -127,13 +126,14 @@ export function OwnerFacilityFormPage() {
       };
 
       if (isEdit) {
-        await facilityMockService.update(id, payload);
-        showToast('Cập nhật cơ sở thành công!', 'success');
+        await ownerFacilityService.updateFacility(id, payload);
+        showToast('Cập nhật thông tin cơ sở thể thao thành công!', 'success');
+        navigate(`/owner/facilities/${id}`);
       } else {
         await ownerFacilityService.createFacility(payload);
         showToast('Tạo cơ sở thể thao mới thành công! Cơ sở đang chờ Admin xét duyệt trước khi hoạt động.', 'success');
+        navigate(ROUTES.OWNER_FACILITIES);
       }
-      navigate(ROUTES.OWNER_FACILITIES);
     } catch (err) {
       showToast(err?.message || 'Không thể lưu cơ sở thể thao.', 'error');
     } finally {
