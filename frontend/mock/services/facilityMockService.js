@@ -80,13 +80,6 @@ export const facilityMockService = {
     };
   },
 
-  create: async (data) => {
-    return facRepo.create({
-      ...data,
-      status: 'PENDING' // Cơ sở mới tạo phải chờ Admin duyệt theo flow C
-    });
-  },
-
   update: async (id, data) => {
     return facRepo.update(id, data);
   },

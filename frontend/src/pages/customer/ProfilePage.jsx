@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import { userMockService } from '../../../mock/services/userMockService.js';
-import { uploadMockFile, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
+import { uploadFileToServer, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
 import { Save, User, Lock, Upload } from 'lucide-react';
 
 export function ProfilePage() {
@@ -27,7 +27,7 @@ export function ProfilePage() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const uploaded = await uploadMockFile(file);
+      const uploaded = await uploadFileToServer(file);
       setAvatar(uploaded.dbPath);
       showToast(`Đã tải ảnh đại diện: ${uploaded.fileName}`, 'success');
     } catch (err) {

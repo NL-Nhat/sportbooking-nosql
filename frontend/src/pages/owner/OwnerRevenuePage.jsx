@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { bookingMockService } from '../../../mock/services/bookingMockService.js';
-import { facilityMockService } from '../../../mock/services/facilityMockService.js';
+import { ownerFacilityService } from '../../services/ownerFacilityService.js';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
 import { DollarSign, TrendingUp, CreditCard, ArrowDownRight, ArrowUpRight } from 'lucide-react';
@@ -17,7 +17,7 @@ export function OwnerRevenuePage() {
     if (user) {
       Promise.all([
         bookingMockService.getOwnerBookings(user._id),
-        facilityMockService.getByOwner(user._id)
+        ownerFacilityService.getMyFacilities().catch(() => [])
       ]).then(([bList, fList]) => {
         setBookings(bList);
         setFacilities(fList);

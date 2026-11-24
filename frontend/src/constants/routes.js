@@ -59,12 +59,13 @@ export const ROUTES = {
   OWNER_REVENUE: '/owner/revenue',
   OWNER_PROFILE: '/owner/profile',
 
-  // Admin (Giới hạn theo Backend Guidelines v2.0)
+  // Admin
   ADMIN_DASHBOARD: '/admin',
   ADMIN_USERS: '/admin/users',
   ADMIN_USER_DETAIL: '/admin/users/:id',
   ADMIN_OWNER_APPLICATIONS: '/admin/owner-applications',
   ADMIN_OWNER_APP_DETAIL: '/admin/owner-applications/:id',
+  ADMIN_FACILITIES: '/admin/facilities',
   ADMIN_CATEGORIES: '/admin/categories',
   ADMIN_REVIEWS: '/admin/reviews',
   ADMIN_COMPLAINTS: '/admin/complaints',

@@ -1,5 +1,6 @@
 package com.example.backend.controllers;
 
+import com.example.backend.dtos.facility.CreateFacilityRequest;
 import com.example.backend.dtos.facility.OwnerFacilityDto;
 import com.example.backend.dtos.response.ApiSuccessResponse;
 import com.example.backend.services.OwnerFacilityService;
@@ -8,8 +9,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -43,5 +47,18 @@ public class OwnerFacilityController {
         return ResponseEntity.ok(
                 ApiSuccessResponse.success("Lấy danh sách cơ sở thể thao của chủ sân thành công", facilities)
         );
+    }
+
+    @PostMapping
+    @Operation(summary = "Tạo cơ sở thể thao mới cho Chủ sân hiện tại")
+    public ResponseEntity<ApiSuccessResponse<OwnerFacilityDto>> createFacility(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @RequestBody CreateFacilityRequest request
+    ) {
+        OwnerFacilityDto created = ownerFacilityService.createFacility(authorizationHeader, request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiSuccessResponse.success("Tạo cơ sở thể thao mới thành công", created));
     }
 }

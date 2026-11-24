@@ -71,6 +71,7 @@ import AdminDashboardPage from './pages/admin/AdminDashboardPage.jsx';
 import AdminUsersPage from './pages/admin/AdminUsersPage.jsx';
 import AdminOwnerApplicationsPage from './pages/admin/AdminOwnerApplicationsPage.jsx';
 import AdminOwnerAppDetailPage from './pages/admin/AdminOwnerAppDetailPage.jsx';
+import AdminFacilitiesPage from './pages/admin/AdminFacilitiesPage.jsx';
 import AdminCategoriesPage from './pages/admin/AdminCategoriesPage.jsx';
 import AdminReviewsPage from './pages/admin/AdminReviewsPage.jsx';
 import AdminComplaintsPage from './pages/admin/AdminComplaintsPage.jsx';
@@ -173,6 +174,7 @@ export const router = createBrowserRouter([
       { path: 'users/:id', element: <AdminUsersPage /> },
       { path: 'owner-applications', element: <AdminOwnerApplicationsPage /> },
       { path: 'owner-applications/:id', element: <AdminOwnerAppDetailPage /> },
+      { path: 'facilities', element: <AdminFacilitiesPage /> },
       { path: 'categories', element: <AdminCategoriesPage /> },
       { path: 'reviews', element: <AdminReviewsPage /> },
       { path: 'complaints', element: <AdminComplaintsPage /> },

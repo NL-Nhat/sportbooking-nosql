@@ -7,6 +7,7 @@ import { ROUTES } from '../../constants/routes.js';
 import { 
   Users, 
   ShieldCheck, 
+  Building2,
   AlertTriangle, 
   MessageSquareWarning,
   Star,
@@ -21,6 +22,7 @@ import {
 export function AdminDashboardPage() {
   const [users, setUsers] = useState([]);
   const [ownerApps, setOwnerApps] = useState([]);
+  const [facilities, setFacilities] = useState([]);
   const [reviews, setReviews] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -28,12 +30,14 @@ export function AdminDashboardPage() {
   useEffect(() => {
     setUsers(mockStorage.getCollection('users') || []);
     setOwnerApps(mockStorage.getCollection('owner_applications') || []);
+    setFacilities(mockStorage.getCollection('facilities') || []);
     setReviews(mockStorage.getCollection('reviews') || []);
     setComplaints(mockStorage.getCollection('complaints') || []);
     setCategories(mockStorage.getCollection('sports_categories') || []);
   }, []);
 
   const pendingApps = ownerApps.filter(a => a.status === 'PENDING');
+  const pendingFacilities = facilities.filter(f => f.status === 'PENDING');
   const openComplaints = complaints.filter(c => c.status === 'OPEN' || c.status === 'IN_PROGRESS' || c.status === 'PENDING');
   const hiddenReviews = reviews.filter(r => r.status === 'HIDDEN');
   
@@ -89,7 +93,25 @@ export function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Metric 3: Khiếu nại cần xử lý */}
+        {/* Metric 3: Cơ sở thể thao chờ duyệt */}
+        <div className="card" style={{ padding: '20px', borderLeft: pendingFacilities.length > 0 ? '4px solid var(--sb-warning)' : '1px solid var(--sb-border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+            <span style={{ fontSize: '0.8rem', color: 'var(--sb-text-muted)', fontWeight: 600 }}>Cơ sở mới chờ duyệt</span>
+            <div style={{ width: '36px', height: '36px', borderRadius: '8px', backgroundColor: 'var(--sb-primary-50)', color: 'var(--sb-primary-700)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Building2 size={20} />
+            </div>
+          </div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: 'var(--sb-primary-900)' }}>
+            {pendingFacilities.length} cơ sở
+          </div>
+          <div style={{ fontSize: '0.75rem', color: pendingFacilities.length > 0 ? 'var(--sb-warning)' : 'var(--sb-success)', marginTop: '4px' }}>
+            <Link to={ROUTES.ADMIN_FACILITIES} style={{ color: 'inherit', fontWeight: 600 }}>
+              {pendingFacilities.length > 0 ? 'Xem & duyệt cơ sở mới →' : `Tổng ${facilities.length} cơ sở trên sàn`}
+            </Link>
+          </div>
+        </div>
+
+        {/* Metric 4: Khiếu nại cần xử lý */}
         <div className="card" style={{ padding: '20px', borderLeft: openComplaints.length > 0 ? '4px solid var(--sb-danger)' : '1px solid var(--sb-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
             <span style={{ fontSize: '0.8rem', color: 'var(--sb-text-muted)', fontWeight: 600 }}>Khiếu nại đang chờ xử lý</span>

@@ -51,11 +51,11 @@ export function DashboardSidebar({ role = 'OWNER', isOpen, onClose }) {
     { label: 'Hồ sơ chủ sân', path: ROUTES.OWNER_PROFILE, icon: User }
   ];
 
-  // Quyền Admin theo SportBooking_Backend_Functions_API_Security_Guidelines.md v2.0
   const adminMenuItems = [
     { label: 'Tổng quan hệ thống', path: ROUTES.ADMIN_DASHBOARD, icon: LayoutDashboard },
     { label: 'Quản lý người dùng', path: ROUTES.ADMIN_USERS, icon: Users },
     { label: 'Duyệt hồ sơ Chủ sân', path: ROUTES.ADMIN_OWNER_APPLICATIONS, icon: ShieldCheck },
+    { label: 'Duyệt cơ sở thể thao', path: ROUTES.ADMIN_FACILITIES, icon: Building2 },
     { label: 'Danh mục thể thao', path: ROUTES.ADMIN_CATEGORIES, icon: Layers },
     { label: 'Kiểm duyệt đánh giá', path: ROUTES.ADMIN_REVIEWS, icon: Star },
     { label: 'Xử lý khiếu nại', path: ROUTES.ADMIN_COMPLAINTS, icon: MessageSquareWarning },

@@ -1,61 +1,88 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ownerFacilityService } from '../../services/ownerFacilityService.js';
 import { facilityMockService } from '../../../mock/services/facilityMockService.js';
-import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
-import { uploadMockFile, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
+import { uploadFileToServer, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
 import { ROUTES } from '../../constants/routes.js';
 import { ArrowLeft, Save, Upload } from 'lucide-react';
+
+const AVAILABLE_AMENITIES = [
+  { code: 'PARKING', label: 'Bãi giữ xe (PARKING)' },
+  { code: 'CHANGING_ROOM', label: 'Phòng thay đồ (CHANGING_ROOM)' },
+  { code: 'WIFI', label: 'Wifi miễn phí (WIFI)' },
+  { code: 'CANTEEN', label: 'Quầy nước / Căng tin (CANTEEN)' },
+  { code: 'SHOWER', label: 'Phòng tắm nước nóng (SHOWER)' },
+  { code: 'LOCKER', label: 'Tủ đồ cá nhân (LOCKER)' }
+];
 
 export function OwnerFacilityFormPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
-  const { user } = useAuth();
   const { showToast } = useToast();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [province, setProvince] = useState('Đà Nẵng');
   const [district, setDistrict] = useState('Hải Châu');
   const [ward, setWard] = useState('Hòa Cường Nam');
   const [detail, setDetail] = useState('');
   const [lat, setLat] = useState('16.0352');
   const [lng, setLng] = useState('108.2241');
-  const [images, setImages] = useState([
-    'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1000&q=80'
-  ]);
+  const [amenities, setAmenities] = useState(['PARKING', 'CHANGING_ROOM', 'WIFI']);
+  const [images, setImages] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [loading, setLoading] = useState(isEdit);
 
   useEffect(() => {
     if (isEdit) {
-      facilityMockService.getById(id).then((fac) => {
-        if (fac) {
-          setName(fac.name);
-          setDescription(fac.description);
-          setDistrict(fac.address?.district || 'Hải Châu');
-          setWard(fac.address?.ward || '');
-          setDetail(fac.address?.detail || '');
-          setLat(String(fac.location?.coordinates?.[1] ?? '16.0352'));
-          setLng(String(fac.location?.coordinates?.[0] ?? '108.2241'));
-          if (Array.isArray(fac.images) && fac.images.length > 0) {
-            setImages(fac.images.map((img) => (typeof img === 'object' ? img.url : img)));
+      ownerFacilityService
+        .getMyFacilities()
+        .then((list) => {
+          const found = list.find((f) => (f.id || f._id) === id);
+          if (found) return found;
+          return facilityMockService.getById(id);
+        })
+        .then((fac) => {
+          if (fac) {
+            setName(fac.name || '');
+            setDescription(fac.description || '');
+            setProvince(fac.address?.province || 'Đà Nẵng');
+            setDistrict(fac.address?.district || 'Hải Châu');
+            setWard(fac.address?.ward || '');
+            setDetail(fac.address?.detail || '');
+            setLat(String(fac.location?.coordinates?.[1] ?? '16.0352'));
+            setLng(String(fac.location?.coordinates?.[0] ?? '108.2241'));
+            if (Array.isArray(fac.amenities) && fac.amenities.length > 0) {
+              setAmenities(fac.amenities);
+            }
+            if (Array.isArray(fac.images) && fac.images.length > 0) {
+              setImages(fac.images.map((img) => (typeof img === 'object' ? img.url : img)));
+            }
           }
-        }
-        setLoading(false);
-      });
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     }
   }, [id, isEdit]);
+
+  const handleToggleAmenity = (code) => {
+    setAmenities((prev) =>
+      prev.includes(code) ? prev.filter((item) => item !== code) : [...prev, code]
+    );
+  };
 
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
     try {
-      const uploaded = await Promise.all(files.map((f) => uploadMockFile(f)));
+      const uploaded = await Promise.all(files.map((f) => uploadFileToServer(f)));
       const newPaths = uploaded.map((u) => u.dbPath);
-      setImages((prev) => [...newPaths, ...prev.filter((p) => !p.includes('unsplash.com'))]);
-      showToast(`Đã tải lên ${uploaded.length} ảnh (lưu tại: ${uploaded[0].dbPath})`, 'success');
+      setImages((prev) => [...prev, ...newPaths]);
+      showToast(`Đã tải lên ${uploaded.length} ảnh (lưu tại: frontend/public${uploaded[0].dbPath})`, 'success');
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -68,43 +95,49 @@ export function OwnerFacilityFormPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || !detail.trim()) {
-      showToast('Vui lòng điền đầy đủ tên và địa chỉ cơ sở.', 'warning');
+    if (!name.trim() || !ward.trim() || !detail.trim()) {
+      showToast('Vui lòng điền đầy đủ tên cơ sở, phường/xã và địa chỉ chi tiết.', 'warning');
       return;
     }
 
     setSubmitting(true);
     try {
+      const parsedLng = parseFloat(lng);
+      const parsedLat = parseFloat(lat);
+
       const payload = {
-        name,
-        description,
+        name: name.trim(),
+        description: description.trim(),
         address: {
-          province: 'Đà Nẵng',
-          district,
-          ward,
-          detail
+          province: province.trim() || 'Đà Nẵng',
+          district: district.trim(),
+          ward: ward.trim(),
+          detail: detail.trim()
         },
         location: {
           type: 'Point',
-          coordinates: [parseFloat(lng) || 108.2241, parseFloat(lat) || 16.0352]
+          coordinates: [
+            Number.isFinite(parsedLng) ? parsedLng : 108.2241,
+            Number.isFinite(parsedLat) ? parsedLat : 16.0352
+          ]
         },
-        images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=1000&q=80'],
-        amenities: ['Bãi giữ xe', 'Wifi miễn phí', 'Nước uống', 'Phòng thay đồ']
+        images: images.map((url) => ({
+          url,
+          alt: name.trim()
+        })),
+        amenities
       };
 
       if (isEdit) {
         await facilityMockService.update(id, payload);
         showToast('Cập nhật cơ sở thành công!', 'success');
       } else {
-        await facilityMockService.create({
-          ...payload,
-          ownerId: user._id
-        });
-        showToast('Tạo cơ sở mới thành công! Đang chờ Admin duyệt hiển thị.', 'success');
+        await ownerFacilityService.createFacility(payload);
+        showToast('Tạo cơ sở thể thao mới thành công! Cơ sở đang chờ Admin xét duyệt trước khi hoạt động.', 'success');
       }
       navigate(ROUTES.OWNER_FACILITIES);
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err?.message || 'Không thể lưu cơ sở thể thao.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -115,9 +148,19 @@ export function OwnerFacilityFormPage() {
   }
 
   return (
-    <div style={{ maxWidth: '720px' }}>
+    <div style={{ maxWidth: '760px' }}>
       <div style={{ marginBottom: '20px' }}>
-        <Link to={ROUTES.OWNER_FACILITIES} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: 'var(--sb-text-secondary)', fontWeight: 600 }}>
+        <Link
+          to={ROUTES.OWNER_FACILITIES}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            fontSize: '0.85rem',
+            color: 'var(--sb-text-secondary)',
+            fontWeight: 600
+          }}
+        >
           <ArrowLeft size={16} /> Quay lại danh sách cơ sở
         </Link>
       </div>
@@ -132,7 +175,9 @@ export function OwnerFacilityFormPage() {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Tên cơ sở thể thao <span className="required">*</span></label>
+            <label className="form-label">
+              Tên cơ sở thể thao <span className="required">*</span>
+            </label>
             <input
               type="text"
               className="form-control"
@@ -154,9 +199,24 @@ export function OwnerFacilityFormPage() {
             />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
             <div className="form-group">
-              <label className="form-label">Quận / Huyện</label>
+              <label className="form-label">
+                Tỉnh / Thành phố <span className="required">*</span>
+              </label>
+              <input
+                type="text"
+                className="form-control"
+                value={province}
+                onChange={(e) => setProvince(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">
+                Quận / Huyện <span className="required">*</span>
+              </label>
               <select
                 className="form-control"
                 value={district}
@@ -168,22 +228,29 @@ export function OwnerFacilityFormPage() {
                 <option value="Thanh Khê">Thanh Khê</option>
                 <option value="Cẩm Lệ">Cẩm Lệ</option>
                 <option value="Liên Chiểu">Liên Chiểu</option>
+                <option value="Hòa Vang">Hòa Vang</option>
               </select>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Phường / Xã</label>
+              <label className="form-label">
+                Phường / Xã <span className="required">*</span>
+              </label>
               <input
                 type="text"
                 className="form-control"
+                placeholder="Ví dụ: Hòa Xuân"
                 value={ward}
                 onChange={(e) => setWard(e.target.value)}
+                required
               />
             </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">Địa chỉ chi tiết <span className="required">*</span></label>
+            <label className="form-label">
+              Địa chỉ chi tiết <span className="required">*</span>
+            </label>
             <input
               type="text"
               className="form-control"
@@ -194,6 +261,65 @@ export function OwnerFacilityFormPage() {
             />
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div className="form-group">
+              <label className="form-label">Kinh độ (Longitude)</label>
+              <input
+                type="number"
+                step="any"
+                className="form-control"
+                value={lng}
+                onChange={(e) => setLng(e.target.value)}
+                placeholder="108.2241"
+              />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Vĩ độ (Latitude)</label>
+              <input
+                type="number"
+                step="any"
+                className="form-control"
+                value={lat}
+                onChange={(e) => setLat(e.target.value)}
+                placeholder="16.0352"
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Tiện ích tại cơ sở</label>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+              gap: '10px',
+              padding: '12px',
+              backgroundColor: 'var(--sb-background)',
+              borderRadius: '10px',
+              border: '1px solid var(--sb-border)'
+            }}>
+              {AVAILABLE_AMENITIES.map((item) => (
+                <label
+                  key={item.code}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={amenities.includes(item.code)}
+                    onChange={() => handleToggleAmenity(item.code)}
+                  />
+                  <span>{item.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="form-group">
             <label className="form-label">Hình ảnh cơ sở thể thao (Upload file ảnh)</label>
             <div style={{
@@ -202,7 +328,14 @@ export function OwnerFacilityFormPage() {
               padding: '16px',
               backgroundColor: 'var(--sb-background)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                marginBottom: images.length > 0 ? '12px' : 0
+              }}>
                 <div style={{ fontSize: '0.825rem', color: 'var(--sb-text-secondary)' }}>
                   Tải ảnh cơ sở lên thư mục <code>/uploads/</code> (tự động gắn mã định danh duy nhất vào tên file).
                 </div>
@@ -221,13 +354,32 @@ export function OwnerFacilityFormPage() {
               {images.length > 0 && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '12px' }}>
                   {images.map((imgPath, idx) => (
-                    <div key={idx} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--sb-border)', backgroundColor: '#FFFFFF' }}>
+                    <div
+                      key={idx}
+                      style={{
+                        position: 'relative',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        border: '1px solid var(--sb-border)',
+                        backgroundColor: '#FFFFFF'
+                      }}
+                    >
                       <img
                         src={resolveAssetUrl(imgPath)}
                         alt={`Facility ${idx}`}
                         style={{ width: '100%', height: '95px', objectFit: 'cover' }}
                       />
-                      <div style={{ padding: '4px 6px', fontSize: '0.7rem', color: 'var(--sb-text-muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={imgPath}>
+                      <div
+                        style={{
+                          padding: '4px 6px',
+                          fontSize: '0.7rem',
+                          color: 'var(--sb-text-muted)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}
+                        title={imgPath}
+                      >
                         {imgPath}
                       </div>
                       <button
@@ -255,7 +407,12 @@ export function OwnerFacilityFormPage() {
             </div>
           </div>
 
-          <button type="submit" className="btn btn-primary btn-lg" style={{ width: '100%', marginTop: '12px' }} disabled={submitting}>
+          <button
+            type="submit"
+            className="btn btn-primary btn-lg"
+            style={{ width: '100%', marginTop: '12px' }}
+            disabled={submitting}
+          >
             <Save size={16} /> {submitting ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi cơ sở' : 'Tạo cơ sở mới'}
           </button>
         </form>
