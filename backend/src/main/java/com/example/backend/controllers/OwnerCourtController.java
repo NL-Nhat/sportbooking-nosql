@@ -1,5 +1,6 @@
 package com.example.backend.controllers;
 
+import com.example.backend.dtos.court.CreateCourtRequest;
 import com.example.backend.dtos.court.OwnerCourtDto;
 import com.example.backend.dtos.response.ApiSuccessResponse;
 import com.example.backend.services.OwnerCourtService;
@@ -8,9 +9,12 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -76,5 +80,33 @@ public class OwnerCourtController {
         return ResponseEntity.ok(
                 ApiSuccessResponse.success("Lấy danh sách sân theo cơ sở thành công", courts)
         );
+    }
+
+    @PostMapping("/courts")
+    @Operation(summary = "Tạo sân thể thao mới kèm cấu hình khung giờ cho thuê hằng ngày (DAILY)")
+    public ResponseEntity<ApiSuccessResponse<OwnerCourtDto>> createCourt(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @RequestBody CreateCourtRequest request
+    ) {
+        OwnerCourtDto created = ownerCourtService.createCourt(authorizationHeader, null, request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiSuccessResponse.success("Tạo sân thể thao và lưu mẫu khung giờ cho thuê hằng ngày thành công", created));
+    }
+
+    @PostMapping("/facilities/{facilityId}/courts")
+    @Operation(summary = "Tạo sân thể thao mới cho một cơ sở cụ thể kèm cấu hình khung giờ cho thuê hằng ngày (DAILY)")
+    public ResponseEntity<ApiSuccessResponse<OwnerCourtDto>> createCourtForFacility(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của cơ sở thể thao")
+            @PathVariable("facilityId") String facilityId,
+            @RequestBody CreateCourtRequest request
+    ) {
+        OwnerCourtDto created = ownerCourtService.createCourt(authorizationHeader, facilityId, request);
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(ApiSuccessResponse.success("Tạo sân thể thao và lưu mẫu khung giờ cho thuê hằng ngày thành công", created));
     }
 }

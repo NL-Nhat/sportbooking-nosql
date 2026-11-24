@@ -7,12 +7,12 @@ import { ROUTES } from '../../constants/routes.js';
 import { ArrowLeft, Save, Upload } from 'lucide-react';
 
 const AVAILABLE_AMENITIES = [
-  { code: 'PARKING', label: 'Bãi giữ xe (PARKING)' },
-  { code: 'CHANGING_ROOM', label: 'Phòng thay đồ (CHANGING_ROOM)' },
-  { code: 'WIFI', label: 'Wifi miễn phí (WIFI)' },
-  { code: 'CANTEEN', label: 'Quầy nước / Căng tin (CANTEEN)' },
-  { code: 'SHOWER', label: 'Phòng tắm nước nóng (SHOWER)' },
-  { code: 'LOCKER', label: 'Tủ đồ cá nhân (LOCKER)' }
+  { code: 'PARKING', label: 'Bãi giữ xe' },
+  { code: 'CHANGING_ROOM', label: 'Phòng thay đồ' },
+  { code: 'WIFI', label: 'Wifi miễn phí' },
+  { code: 'CANTEEN', label: 'Quầy nước / Căng tin' },
+  { code: 'SHOWER', label: 'Phòng tắm nước nóng' },
+  { code: 'LOCKER', label: 'Tủ đồ cá nhân' }
 ];
 
 export function OwnerFacilityFormPage() {
@@ -261,7 +261,7 @@ export function OwnerFacilityFormPage() {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="form-group">
-              <label className="form-label">Kinh độ (Longitude)</label>
+              <label className="form-label">Kinh độ</label>
               <input
                 type="number"
                 step="any"
@@ -273,7 +273,7 @@ export function OwnerFacilityFormPage() {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Vĩ độ (Latitude)</label>
+              <label className="form-label">Vĩ độ</label>
               <input
                 type="number"
                 step="any"

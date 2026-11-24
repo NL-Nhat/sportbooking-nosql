@@ -128,8 +128,8 @@
 
 - **Bước 2: Chủ sân Quản lý Sân thể thao & Thiết lập Khung giờ cho thuê mẫu (`courts`, `operating_hours`)**
   - [x] Làm API lấy danh sách các sân của Chủ sân (`GET /api/v1/owner/courts` và `GET /api/v1/owner/facilities/{facilityId}/courts`): lọc theo cơ sở (`facilityId`), môn thể thao (`categoryId`), trạng thái (`AVAILABLE`, `MAINTENANCE`, `INACTIVE`), tìm kiếm theo tên sân, kết nối giao diện `/owner/courts` (`OwnerCourtsPage.jsx`).
-  - [ ] Làm API tạo sân mới kèm cấu hình khung giờ cho thuê trong ngày (`POST /api/v1/owner/courts`):
-    - Kiểm tra `facilityId` thuộc quyền sở hữu của Chủ sân hiện tại và `categoryId` hợp lệ.
+  - [x] Làm API tạo sân mới kèm cấu hình khung giờ cho thuê trong ngày (`POST /api/v1/owner/courts` và `POST /api/v1/owner/facilities/{facilityId}/courts`):
+    - Kiểm tra `facilityId` thuộc quyền sở hữu của Chủ sân hiện tại và `categoryId` hợp lệ (`ACTIVE`).
     - Tải ảnh sân lên thư mục vật lý `frontend/public/uploads/` qua `POST /api/v1/uploads/image` và lưu đường dẫn `/uploads/<timestamp>_<randomId>_<fileName>` vào mảng `courts.images`.
     - Lưu thông tin sân vào collection `courts`: `facilityId`, `categoryId`, `name`, `description`, `attributes` (`surface`, `size`, `indoor`, `lighting`), `capacity`, danh sách ảnh `images`, `status = "AVAILABLE"`.
     - Lưu đồng thời danh sách khung giờ cho thuê mẫu vào collection `operating_hours`: nhận mảng `timeSlots` (ví dụ `[{ startTime: "06:00", endTime: "07:00" }, { startTime: "14:00", endTime: "16:00" }]`), kiểm tra `startTime < endTime` và không chồng lấn giờ, đặt `repeatMode = "DAILY"`.

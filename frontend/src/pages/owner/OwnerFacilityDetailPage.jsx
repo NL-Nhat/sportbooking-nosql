@@ -26,12 +26,12 @@ import {
 } from 'lucide-react';
 
 const AMENITY_LABELS = {
-  PARKING: 'Bãi giữ xe (PARKING)',
-  CHANGING_ROOM: 'Phòng thay đồ (CHANGING_ROOM)',
-  WIFI: 'Wifi miễn phí (WIFI)',
-  CANTEEN: 'Quầy nước / Căng tin (CANTEEN)',
-  SHOWER: 'Phòng tắm nước nóng (SHOWER)',
-  LOCKER: 'Tủ đồ cá nhân (LOCKER)'
+  PARKING: 'Bãi giữ xe',
+  CHANGING_ROOM: 'Phòng thay đồ',
+  WIFI: 'Wifi miễn phí',
+  CANTEEN: 'Quầy nước / Căng tin',
+  SHOWER: 'Phòng tắm nước nóng',
+  LOCKER: 'Tủ đồ cá nhân'
 };
 
 export function OwnerFacilityDetailPage() {
