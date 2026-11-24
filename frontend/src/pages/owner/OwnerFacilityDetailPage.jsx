@@ -523,9 +523,14 @@ export function OwnerFacilityDetailPage() {
                         <StatusBadge status={court.status} />
                       </td>
                       <td>
-                        <Link to={`/owner/courts/${courtId}/edit`} className="btn btn-secondary btn-sm">
-                          <Edit size={14} /> Sửa sân
-                        </Link>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <Link to={`/owner/courts/${courtId}`} className="btn btn-secondary btn-sm">
+                            Xem
+                          </Link>
+                          <Link to={`/owner/courts/${courtId}/edit`} className="btn btn-primary btn-sm">
+                            <Edit size={14} /> Sửa sân
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   );

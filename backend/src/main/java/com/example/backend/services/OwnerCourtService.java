@@ -7,6 +7,7 @@ import com.example.backend.exceptions.AppException;
 import com.example.backend.models.Court;
 import com.example.backend.models.Facility;
 import com.example.backend.models.OperatingHours;
+import com.example.backend.models.PriceRule;
 import com.example.backend.models.SportsCategory;
 import com.example.backend.models.User;
 import com.example.backend.models.embedded.ImageItem;
@@ -14,6 +15,7 @@ import com.example.backend.models.embedded.TimeSlot;
 import com.example.backend.repositories.CourtRepository;
 import com.example.backend.repositories.FacilityRepository;
 import com.example.backend.repositories.OperatingHoursRepository;
+import com.example.backend.repositories.PriceRuleRepository;
 import com.example.backend.repositories.SportsCategoryRepository;
 import com.example.backend.repositories.UserRepository;
 import com.example.backend.security.JwtUtil;
@@ -49,6 +51,7 @@ public class OwnerCourtService {
     private final CourtRepository courtRepository;
     private final FacilityRepository facilityRepository;
     private final OperatingHoursRepository operatingHoursRepository;
+    private final PriceRuleRepository priceRuleRepository;
     private final SportsCategoryRepository sportsCategoryRepository;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
@@ -157,14 +160,47 @@ public class OwnerCourtService {
             Facility facility = facilitiesById.get(court.getFacilityId());
             SportsCategory category = categoriesById.get(court.getCategoryId());
             OperatingHours op = operatingHoursByCourtId.get(court.getId());
-            List<TimeSlot> timeSlots = op != null && op.getTimeSlots() != null
-                    ? op.getTimeSlots()
-                    : Collections.emptyList();
 
-            result.add(toDto(court, facility, category, timeSlots));
+            result.add(toDto(court, facility, category, op, null));
         }
 
         return result;
+    }
+
+    public OwnerCourtDto getOwnerCourtDetail(String authorizationHeader, String courtId) {
+        User owner = authenticateOwner(authorizationHeader);
+
+        if (courtId == null || courtId.isBlank()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_COURT_ID", "Mã sân thể thao không hợp lệ");
+        }
+
+        Court court = courtRepository.findById(courtId.trim())
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "COURT_NOT_FOUND",
+                        "Không tìm thấy sân thể thao"
+                ));
+
+        Facility facility = court.getFacilityId() != null
+                ? facilityRepository.findById(court.getFacilityId()).orElse(null)
+                : null;
+
+        if (facility == null || !owner.getId().equals(facility.getOwnerId())) {
+            throw new AppException(
+                    HttpStatus.NOT_FOUND,
+                    "COURT_NOT_FOUND",
+                    "Không tìm thấy sân thể thao thuộc quyền sở hữu của bạn"
+            );
+        }
+
+        SportsCategory category = court.getCategoryId() != null
+                ? sportsCategoryRepository.findById(court.getCategoryId()).orElse(null)
+                : null;
+
+        OperatingHours operatingHours = operatingHoursRepository.findByCourtId(court.getId()).orElse(null);
+        List<PriceRule> priceRules = priceRuleRepository.findByCourtIdOrderByPriorityDesc(court.getId());
+
+        return toDto(court, facility, category, operatingHours, priceRules);
     }
 
     public OwnerCourtDto createCourt(
@@ -214,7 +250,6 @@ public class OwnerCourtService {
             errors.add(new FieldErrorDetail("status", "INVALID_VALUE", "Trạng thái sân phải là AVAILABLE, MAINTENANCE hoặc INACTIVE"));
         }
 
-        // Lấy danh sách timeSlots từ operatingHours hoặc từ root request
         List<TimeSlot> rawTimeSlots = request.getTimeSlots();
         String rawEffectiveFrom = request.getEffectiveFrom();
         String rawEffectiveTo = request.getEffectiveTo();
@@ -255,7 +290,6 @@ public class OwnerCourtService {
             throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu tạo sân không hợp lệ", errors);
         }
 
-        // Kiểm tra cơ sở tồn tại và thuộc quyền sở hữu của Owner hiện tại
         Facility facility = facilityRepository.findById(facilityId)
                 .orElseThrow(() -> new AppException(
                         HttpStatus.NOT_FOUND,
@@ -271,7 +305,6 @@ public class OwnerCourtService {
             );
         }
 
-        // Kiểm tra danh mục môn thể thao tồn tại và đang ACTIVE (hỗ trợ cả ObjectId hoặc mã code như FOOTBALL)
         SportsCategory category = resolveActiveCategory(rawCategoryId);
 
         Map<String, Object> sanitizedAttributes = sanitizeAttributes(request.getAttributes());
@@ -305,7 +338,7 @@ public class OwnerCourtService {
 
         OperatingHours savedOperatingHours = operatingHoursRepository.save(operatingHours);
 
-        return toDto(savedCourt, facility, category, savedOperatingHours.getTimeSlots());
+        return toDto(savedCourt, facility, category, savedOperatingHours, Collections.emptyList());
     }
 
     private SportsCategory resolveActiveCategory(String categoryIdOrCode) {
@@ -448,13 +481,19 @@ public class OwnerCourtService {
             Court court,
             Facility facility,
             SportsCategory category,
-            List<TimeSlot> timeSlots
+            OperatingHours operatingHours,
+            List<PriceRule> priceRules
     ) {
+        List<TimeSlot> timeSlots = operatingHours != null && operatingHours.getTimeSlots() != null
+                ? operatingHours.getTimeSlots()
+                : Collections.emptyList();
+
         return OwnerCourtDto.builder()
                 .id(court.getId())
                 .mongoId(court.getId())
                 .facilityId(court.getFacilityId())
                 .facilityName(facility != null ? facility.getName() : null)
+                .facilityStatus(facility != null ? facility.getStatus() : null)
                 .categoryId(court.getCategoryId())
                 .categoryName(category != null ? category.getName() : null)
                 .categoryCode(category != null ? category.getCode() : null)
@@ -464,7 +503,11 @@ public class OwnerCourtService {
                 .images(court.getImages() != null ? court.getImages() : Collections.emptyList())
                 .capacity(court.getCapacity())
                 .status(court.getStatus())
-                .timeSlots(timeSlots != null ? timeSlots : Collections.emptyList())
+                .repeatMode(operatingHours != null ? operatingHours.getRepeatMode() : "DAILY")
+                .effectiveFrom(operatingHours != null ? operatingHours.getEffectiveFrom() : null)
+                .effectiveTo(operatingHours != null ? operatingHours.getEffectiveTo() : null)
+                .timeSlots(timeSlots)
+                .priceRules(priceRules)
                 .createdAt(court.getCreatedAt())
                 .updatedAt(court.getUpdatedAt())
                 .build();

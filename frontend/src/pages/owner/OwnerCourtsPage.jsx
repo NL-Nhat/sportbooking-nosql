@@ -246,7 +246,7 @@ export function OwnerCourtsPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <Link to={`/courts/${courtId}`} className="btn btn-secondary btn-sm" title="Xem public">
+                        <Link to={`/owner/courts/${courtId}`} className="btn btn-secondary btn-sm" title="Xem chi tiết sân">
                           <Eye size={14} />
                         </Link>
                         <Link to={`/owner/courts/${courtId}/edit`} className="btn btn-primary btn-sm" title="Chỉnh sửa sân & khung giờ">

@@ -133,7 +133,8 @@
     - Tải ảnh sân lên thư mục vật lý `frontend/public/uploads/` qua `POST /api/v1/uploads/image` và lưu đường dẫn `/uploads/<timestamp>_<randomId>_<fileName>` vào mảng `courts.images`.
     - Lưu thông tin sân vào collection `courts`: `facilityId`, `categoryId`, `name`, `description`, `attributes` (`surface`, `size`, `indoor`, `lighting`), `capacity`, danh sách ảnh `images`, `status = "AVAILABLE"`.
     - Lưu đồng thời danh sách khung giờ cho thuê mẫu vào collection `operating_hours`: nhận mảng `timeSlots` (ví dụ `[{ startTime: "06:00", endTime: "07:00" }, { startTime: "14:00", endTime: "16:00" }]`), kiểm tra `startTime < endTime` và không chồng lấn giờ, đặt `repeatMode = "DAILY"`.
-  - [ ] Làm API xem chi tiết sân kèm `timeSlots` (`GET /api/v1/owner/courts/{id}`), cập nhật thông tin sân + khung giờ (`PATCH /api/v1/owner/courts/{id}`) và đổi trạng thái sân (`PATCH /api/v1/owner/courts/{id}/status`).
+  - [x] Làm API xem chi tiết sân kèm `timeSlots` (`GET /api/v1/owner/courts/{id}`) và kết nối giao diện Chi tiết sân của Chủ sân (`/owner/courts/:id` — `OwnerCourtDetailPage.jsx`).
+  - [ ] Làm API cập nhật thông tin sân + khung giờ (`PATCH /api/v1/owner/courts/{id}`) và đổi trạng thái sân (`PATCH /api/v1/owner/courts/{id}/status`).
   - [ ] Kết nối giao diện Danh sách sân (`/owner/courts` — `OwnerCourtsPage.jsx`) và Form Thêm/Sửa sân (`/owner/courts/new`, `/owner/courts/:id/edit` — `OwnerCourtFormPage.jsx`) với API thật.
 
 - **Bước 3: Chủ sân Quản lý chuyên sâu Lịch hoạt động theo từng Sân (`operating_hours`)**

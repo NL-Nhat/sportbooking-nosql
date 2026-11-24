@@ -1,5 +1,6 @@
 package com.example.backend.dtos.court;
 
+import com.example.backend.models.PriceRule;
 import com.example.backend.models.embedded.ImageItem;
 import com.example.backend.models.embedded.TimeSlot;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,6 +28,8 @@ public class OwnerCourtDto {
 
     private String facilityName;
 
+    private String facilityStatus;
+
     private String categoryId;
 
     private String categoryName;
@@ -45,7 +48,15 @@ public class OwnerCourtDto {
 
     private String status;
 
+    private String repeatMode;
+
+    private String effectiveFrom;
+
+    private String effectiveTo;
+
     private List<TimeSlot> timeSlots;
+
+    private List<PriceRule> priceRules;
 
     private Instant createdAt;
 

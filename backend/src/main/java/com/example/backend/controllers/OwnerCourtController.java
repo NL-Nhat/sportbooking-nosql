@@ -82,6 +82,20 @@ public class OwnerCourtController {
         );
     }
 
+    @GetMapping("/courts/{courtId}")
+    @Operation(summary = "Xem chi tiết một sân thể thao thuộc quyền sở hữu của Chủ sân hiện tại")
+    public ResponseEntity<ApiSuccessResponse<OwnerCourtDto>> getMyCourtDetail(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của sân thể thao")
+            @PathVariable("courtId") String courtId
+    ) {
+        OwnerCourtDto court = ownerCourtService.getOwnerCourtDetail(authorizationHeader, courtId);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Lấy chi tiết sân thể thao thành công", court)
+        );
+    }
+
     @PostMapping("/courts")
     @Operation(summary = "Tạo sân thể thao mới kèm cấu hình khung giờ cho thuê hằng ngày (DAILY)")
     public ResponseEntity<ApiSuccessResponse<OwnerCourtDto>> createCourt(
