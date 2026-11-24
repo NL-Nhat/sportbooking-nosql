@@ -38,12 +38,7 @@ export function OwnerFacilityFormPage() {
   useEffect(() => {
     if (isEdit) {
       ownerFacilityService
-        .getMyFacilities()
-        .then((list) => {
-          const found = list.find((f) => (f.id || f._id) === id);
-          if (found) return found;
-          return facilityMockService.getById(id);
-        })
+        .getFacilityById(id)
         .then((fac) => {
           if (fac) {
             setName(fac.name || '');
@@ -62,11 +57,14 @@ export function OwnerFacilityFormPage() {
             }
           }
         })
+        .catch((err) => {
+          showToast(err?.message || 'Không thể tải thông tin cơ sở.', 'error');
+        })
         .finally(() => {
           setLoading(false);
         });
     }
-  }, [id, isEdit]);
+  }, [id, isEdit, showToast]);
 
   const handleToggleAmenity = (code) => {
     setAmenities((prev) =>

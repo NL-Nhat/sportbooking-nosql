@@ -194,8 +194,8 @@ export function OwnerFacilitiesPage() {
                     borderTop: '1px solid var(--sb-border)',
                     paddingTop: '16px'
                   }}>
-                    <Link to={`/facilities/${facId}`} className="btn btn-secondary btn-sm" style={{ flex: 1 }}>
-                      <Eye size={14} /> Xem trang public
+                    <Link to={`/owner/facilities/${facId}`} className="btn btn-secondary btn-sm" style={{ flex: 1 }}>
+                      <Eye size={14} /> Xem chi tiết
                     </Link>
                     <Link to={`/owner/facilities/${facId}/edit`} className="btn btn-primary btn-sm" style={{ flex: 1 }}>
                       <Edit size={14} /> Chỉnh sửa

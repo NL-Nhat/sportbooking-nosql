@@ -44,6 +44,8 @@ public class OwnerFacilityDto {
 
     private TimeSlot hoursSummary;
 
+    private List<OwnerFacilityCourtDto> courts;
+
     private Instant createdAt;
 
     private Instant updatedAt;

@@ -122,7 +122,8 @@
     - Lưu `name`, `description`, `address` (`province`, `district`, `ward`, `detail`), tọa độ `location` (`type = "Point"`, `coordinates = [lng, lat]`), danh sách tiện ích `amenities`.
     - Xử lý upload danh sách ảnh cơ sở qua `POST /api/v1/uploads/image` (lưu file ảnh vật lý trực tiếp vào thư mục `frontend/public/uploads/<timestamp>_<randomId>_<fileName>` và lưu đường dẫn `/uploads/<tên_file>` vào DB, không dùng `localStorage`).
     - Khởi tạo `ownerId = currentUser.id`, **`status = "PENDING"` (Chờ Admin xét duyệt mới được phép hoạt động công khai)**.
-  - [ ] Làm API xem chi tiết cơ sở (`GET /api/v1/owner/facilities/{id}`), cập nhật thông tin cơ sở (`PATCH /api/v1/owner/facilities/{id}`) và đổi trạng thái hoạt động (`PATCH /api/v1/owner/facilities/{id}/status`).
+  - [x] Làm API xem chi tiết cơ sở của Chủ sân (`GET /api/v1/owner/facilities/{id}`) và kết nối giao diện Chi tiết cơ sở (`/owner/facilities/:id` — `OwnerFacilityDetailPage.jsx`).
+  - [ ] Làm API cập nhật thông tin cơ sở (`PATCH /api/v1/owner/facilities/{id}`) và đổi trạng thái hoạt động (`PATCH /api/v1/owner/facilities/{id}/status`).
   - [ ] Kết nối giao diện Danh sách cơ sở (`/owner/facilities` — `OwnerFacilitiesPage.jsx`) và Form Thêm/Sửa cơ sở (`/owner/facilities/new`, `/owner/facilities/:id/edit` — `OwnerFacilityFormPage.jsx`) với API thật.
 
 - **Bước 2: Chủ sân Quản lý Sân thể thao & Thiết lập Khung giờ cho thuê mẫu (`courts`, `operating_hours`)**

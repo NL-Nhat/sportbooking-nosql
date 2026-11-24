@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -46,6 +47,20 @@ public class OwnerFacilityController {
         );
         return ResponseEntity.ok(
                 ApiSuccessResponse.success("Lấy danh sách cơ sở thể thao của chủ sân thành công", facilities)
+        );
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Xem chi tiết cơ sở thể thao thuộc quyền sở hữu của Chủ sân hiện tại")
+    public ResponseEntity<ApiSuccessResponse<OwnerFacilityDto>> getMyFacilityDetail(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của cơ sở thể thao")
+            @PathVariable("id") String id
+    ) {
+        OwnerFacilityDto facility = ownerFacilityService.getOwnerFacilityDetail(authorizationHeader, id);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Lấy chi tiết cơ sở thể thao thành công", facility)
         );
     }
 
