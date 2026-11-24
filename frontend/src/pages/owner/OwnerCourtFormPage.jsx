@@ -73,10 +73,7 @@ export function OwnerCourtFormPage() {
         }
 
         if (isEdit) {
-          const allCourts = await ownerCourtService.getMyCourts().catch(() => []);
-          const foundCourt =
-            allCourts.find((c) => (c.id || c._id) === id) ||
-            (await courtMockService.getById(id).catch(() => null));
+          const foundCourt = await ownerCourtService.getCourtById(id).catch(() => null);
 
           if (isMounted && foundCourt) {
             setFacilityId(foundCourt.facilityId || '');
@@ -96,10 +93,7 @@ export function OwnerCourtFormPage() {
                 foundCourt.images.map((img) => (typeof img === 'object' ? img.url : img))
               );
             }
-            const loadedSlots =
-              foundCourt.timeSlots ||
-              foundCourt.operatingHours?.[0]?.timeSlots ||
-              [];
+            const loadedSlots = foundCourt.timeSlots || [];
             if (Array.isArray(loadedSlots) && loadedSlots.length > 0) {
               setTimeSlots(
                 [...loadedSlots].sort((a, b) => a.startTime.localeCompare(b.startTime))

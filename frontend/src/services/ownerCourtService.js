@@ -7,7 +7,14 @@ function normalizeCourt(court) {
     ...court,
     id: resolvedId,
     _id: resolvedId,
-    timeSlots: Array.isArray(court.timeSlots) ? court.timeSlots : []
+    timeSlots: Array.isArray(court.timeSlots) ? court.timeSlots : [],
+    priceRules: Array.isArray(court.priceRules)
+      ? court.priceRules.map((rule) => ({
+          ...rule,
+          id: rule.id || rule._id,
+          _id: rule._id || rule.id
+        }))
+      : []
   };
 }
 
@@ -86,6 +93,17 @@ export const ownerCourtService = {
     });
     const list = Array.isArray(response?.data) ? response.data : [];
     return list.map(normalizeCourt);
+  },
+
+  /**
+   * Xem chi tiết một sân thể thao thuộc quyền sở hữu của Chủ sân đang đăng nhập
+   * GET /api/v1/owner/courts/{courtId}
+   */
+  getCourtById: async (courtId) => {
+    const response = await apiRequest(`/owner/courts/${encodeURIComponent(courtId)}`, {
+      method: 'GET'
+    });
+    return normalizeCourt(response?.data);
   },
 
   /**
