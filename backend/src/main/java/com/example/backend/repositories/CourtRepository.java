@@ -11,4 +11,6 @@ import java.util.List;
 public interface CourtRepository extends MongoRepository<Court, String> {
 
     List<Court> findByFacilityIdIn(Collection<String> facilityIds);
+
+    List<Court> findByFacilityIdOrderByCreatedAtAsc(String facilityId);
 }

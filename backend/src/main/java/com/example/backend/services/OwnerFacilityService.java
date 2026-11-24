@@ -1,12 +1,14 @@
 package com.example.backend.services;
 
 import com.example.backend.dtos.facility.CreateFacilityRequest;
+import com.example.backend.dtos.facility.OwnerFacilityCourtDto;
 import com.example.backend.dtos.facility.OwnerFacilityDto;
 import com.example.backend.dtos.response.ApiErrorResponse.FieldErrorDetail;
 import com.example.backend.exceptions.AppException;
 import com.example.backend.models.Court;
 import com.example.backend.models.Facility;
 import com.example.backend.models.OperatingHours;
+import com.example.backend.models.SportsCategory;
 import com.example.backend.models.User;
 import com.example.backend.models.embedded.Address;
 import com.example.backend.models.embedded.GeoJsonLocation;
@@ -15,6 +17,7 @@ import com.example.backend.models.embedded.TimeSlot;
 import com.example.backend.repositories.CourtRepository;
 import com.example.backend.repositories.FacilityRepository;
 import com.example.backend.repositories.OperatingHoursRepository;
+import com.example.backend.repositories.SportsCategoryRepository;
 import com.example.backend.repositories.UserRepository;
 import com.example.backend.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +42,7 @@ public class OwnerFacilityService {
     private final FacilityRepository facilityRepository;
     private final CourtRepository courtRepository;
     private final OperatingHoursRepository operatingHoursRepository;
+    private final SportsCategoryRepository sportsCategoryRepository;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
 
@@ -99,10 +103,96 @@ public class OwnerFacilityService {
         for (Facility facility : facilities) {
             List<Court> facilityCourts = courtsByFacilityId.getOrDefault(facility.getId(), Collections.emptyList());
             TimeSlot hoursSummary = buildHoursSummary(facilityCourts, operatingHoursByCourtId);
-            result.add(toDto(facility, facilityCourts.size(), hoursSummary));
+            result.add(toDto(facility, facilityCourts.size(), hoursSummary, null));
         }
 
         return result;
+    }
+
+    public OwnerFacilityDto getOwnerFacilityDetail(String authorizationHeader, String facilityId) {
+        User owner = authenticateOwner(authorizationHeader);
+
+        if (facilityId == null || facilityId.isBlank()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_FACILITY_ID", "Mã cơ sở thể thao không hợp lệ");
+        }
+
+        Facility facility = facilityRepository.findById(facilityId.trim())
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "FACILITY_NOT_FOUND",
+                        "Không tìm thấy cơ sở thể thao"
+                ));
+
+        if (!owner.getId().equals(facility.getOwnerId())) {
+            throw new AppException(
+                    HttpStatus.NOT_FOUND,
+                    "FACILITY_NOT_FOUND",
+                    "Không tìm thấy cơ sở thể thao thuộc quyền sở hữu của bạn"
+            );
+        }
+
+        List<Court> facilityCourts = courtRepository.findByFacilityIdOrderByCreatedAtAsc(facility.getId());
+        List<String> courtIds = new ArrayList<>();
+        Set<String> categoryIds = new LinkedHashSet<>();
+
+        for (Court court : facilityCourts) {
+            if (court.getId() != null) {
+                courtIds.add(court.getId());
+            }
+            if (court.getCategoryId() != null) {
+                categoryIds.add(court.getCategoryId());
+            }
+        }
+
+        Map<String, OperatingHours> operatingHoursByCourtId = new HashMap<>();
+        if (!courtIds.isEmpty()) {
+            List<OperatingHours> operatingHoursList = operatingHoursRepository.findByCourtIdIn(courtIds);
+            for (OperatingHours op : operatingHoursList) {
+                if (op.getCourtId() != null) {
+                    operatingHoursByCourtId.put(op.getCourtId(), op);
+                }
+            }
+        }
+
+        Map<String, SportsCategory> categoriesById = new HashMap<>();
+        if (!categoryIds.isEmpty()) {
+            List<SportsCategory> categories = sportsCategoryRepository.findAllById(categoryIds);
+            for (SportsCategory category : categories) {
+                if (category.getId() != null) {
+                    categoriesById.put(category.getId(), category);
+                }
+            }
+        }
+
+        List<OwnerFacilityCourtDto> courtDtos = new ArrayList<>(facilityCourts.size());
+        for (Court court : facilityCourts) {
+            OperatingHours op = operatingHoursByCourtId.get(court.getId());
+            SportsCategory category = categoriesById.get(court.getCategoryId());
+            List<TimeSlot> timeSlots = op != null && op.getTimeSlots() != null
+                    ? op.getTimeSlots()
+                    : Collections.emptyList();
+
+            courtDtos.add(OwnerFacilityCourtDto.builder()
+                    .id(court.getId())
+                    .mongoId(court.getId())
+                    .facilityId(court.getFacilityId())
+                    .categoryId(court.getCategoryId())
+                    .categoryName(category != null ? category.getName() : null)
+                    .categoryCode(category != null ? category.getCode() : null)
+                    .name(court.getName())
+                    .description(court.getDescription())
+                    .attributes(court.getAttributes())
+                    .images(court.getImages() != null ? court.getImages() : Collections.emptyList())
+                    .capacity(court.getCapacity())
+                    .status(court.getStatus())
+                    .timeSlots(timeSlots)
+                    .createdAt(court.getCreatedAt())
+                    .updatedAt(court.getUpdatedAt())
+                    .build());
+        }
+
+        TimeSlot hoursSummary = buildHoursSummary(facilityCourts, operatingHoursByCourtId);
+        return toDto(facility, facilityCourts.size(), hoursSummary, courtDtos);
     }
 
     public OwnerFacilityDto createFacility(String authorizationHeader, CreateFacilityRequest request) {
@@ -193,10 +283,15 @@ public class OwnerFacilityService {
                 .build();
 
         Facility savedFacility = facilityRepository.save(newFacility);
-        return toDto(savedFacility, 0, null);
+        return toDto(savedFacility, 0, null, Collections.emptyList());
     }
 
-    private OwnerFacilityDto toDto(Facility facility, long courtCount, TimeSlot hoursSummary) {
+    private OwnerFacilityDto toDto(
+            Facility facility,
+            long courtCount,
+            TimeSlot hoursSummary,
+            List<OwnerFacilityCourtDto> courts
+    ) {
         return OwnerFacilityDto.builder()
                 .id(facility.getId())
                 .mongoId(facility.getId())
@@ -210,6 +305,7 @@ public class OwnerFacilityService {
                 .status(facility.getStatus())
                 .courtCount(courtCount)
                 .hoursSummary(hoursSummary)
+                .courts(courts)
                 .createdAt(facility.getCreatedAt())
                 .updatedAt(facility.getUpdatedAt())
                 .build();

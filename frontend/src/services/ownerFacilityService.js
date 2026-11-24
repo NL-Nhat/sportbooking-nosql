@@ -3,10 +3,22 @@ import { apiRequest } from './apiClient.js';
 function normalizeFacility(facility) {
   if (!facility) return null;
   const resolvedId = facility.id || facility._id;
+  const normalizedCourts = Array.isArray(facility.courts)
+    ? facility.courts.map((court) => {
+        const courtId = court.id || court._id;
+        return {
+          ...court,
+          id: courtId,
+          _id: courtId
+        };
+      })
+    : [];
+
   return {
     ...facility,
     id: resolvedId,
-    _id: resolvedId
+    _id: resolvedId,
+    courts: normalizedCourts
   };
 }
 
@@ -31,6 +43,17 @@ export const ownerFacilityService = {
     });
     const list = Array.isArray(response?.data) ? response.data : [];
     return list.map(normalizeFacility);
+  },
+
+  /**
+   * Xem chi tiết một cơ sở thể thao thuộc quyền sở hữu của Chủ sân đang đăng nhập
+   * GET /api/v1/owner/facilities/{id}
+   */
+  getFacilityById: async (id) => {
+    const response = await apiRequest(`/owner/facilities/${encodeURIComponent(id)}`, {
+      method: 'GET'
+    });
+    return normalizeFacility(response?.data);
   },
 
   /**

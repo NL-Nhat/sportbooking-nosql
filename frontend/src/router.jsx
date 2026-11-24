@@ -51,6 +51,7 @@ import CustomerSessionsPage from './pages/customer/CustomerSessionsPage.jsx';
 // Owner Pages
 import OwnerDashboardPage from './pages/owner/OwnerDashboardPage.jsx';
 import OwnerFacilitiesPage from './pages/owner/OwnerFacilitiesPage.jsx';
+import OwnerFacilityDetailPage from './pages/owner/OwnerFacilityDetailPage.jsx';
 import OwnerFacilityFormPage from './pages/owner/OwnerFacilityFormPage.jsx';
 import OwnerCourtsPage from './pages/owner/OwnerCourtsPage.jsx';
 import OwnerCourtFormPage from './pages/owner/OwnerCourtFormPage.jsx';
@@ -144,7 +145,7 @@ export const router = createBrowserRouter([
       { index: true, element: <OwnerDashboardPage /> },
       { path: 'facilities', element: <OwnerFacilitiesPage /> },
       { path: 'facilities/new', element: <OwnerFacilityFormPage /> },
-      { path: 'facilities/:id', element: <OwnerFacilityFormPage /> },
+      { path: 'facilities/:id', element: <OwnerFacilityDetailPage /> },
       { path: 'facilities/:id/edit', element: <OwnerFacilityFormPage /> },
       { path: 'courts', element: <OwnerCourtsPage /> },
       { path: 'courts/new', element: <OwnerCourtFormPage /> },
