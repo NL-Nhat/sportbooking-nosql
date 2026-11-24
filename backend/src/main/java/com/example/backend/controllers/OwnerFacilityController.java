@@ -2,6 +2,8 @@ package com.example.backend.controllers;
 
 import com.example.backend.dtos.facility.CreateFacilityRequest;
 import com.example.backend.dtos.facility.OwnerFacilityDto;
+import com.example.backend.dtos.facility.UpdateFacilityRequest;
+import com.example.backend.dtos.facility.UpdateFacilityStatusRequest;
 import com.example.backend.dtos.response.ApiSuccessResponse;
 import com.example.backend.services.OwnerFacilityService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -75,5 +78,63 @@ public class OwnerFacilityController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiSuccessResponse.success("Tạo cơ sở thể thao mới thành công", created));
+    }
+
+    @PatchMapping("/{id}")
+    @Operation(summary = "Cập nhật thông tin cơ sở thể thao thuộc quyền sở hữu của Chủ sân hiện tại")
+    public ResponseEntity<ApiSuccessResponse<OwnerFacilityDto>> updateFacility(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của cơ sở thể thao")
+            @PathVariable("id") String id,
+            @RequestBody UpdateFacilityRequest request
+    ) {
+        OwnerFacilityDto updated = ownerFacilityService.updateFacility(authorizationHeader, id, request);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Cập nhật thông tin cơ sở thể thao thành công", updated)
+        );
+    }
+
+    @PatchMapping("/{id}/status")
+    @Operation(summary = "Đổi trạng thái hoạt động của cơ sở thể thao (APPROVED / INACTIVE / PENDING)")
+    public ResponseEntity<ApiSuccessResponse<OwnerFacilityDto>> updateFacilityStatus(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của cơ sở thể thao")
+            @PathVariable("id") String id,
+            @RequestBody UpdateFacilityStatusRequest request
+    ) {
+        OwnerFacilityDto updated = ownerFacilityService.updateFacilityStatus(authorizationHeader, id, request);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Cập nhật trạng thái cơ sở thể thao thành công", updated)
+        );
+    }
+
+    @PatchMapping("/{id}/deactivate")
+    @Operation(summary = "Tạm ngừng hoạt động cơ sở thể thao (chuyển trạng thái sang INACTIVE)")
+    public ResponseEntity<ApiSuccessResponse<OwnerFacilityDto>> deactivateFacility(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của cơ sở thể thao")
+            @PathVariable("id") String id
+    ) {
+        OwnerFacilityDto updated = ownerFacilityService.deactivateFacility(authorizationHeader, id);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Đã chuyển cơ sở thể thao sang trạng thái ngừng hoạt động", updated)
+        );
+    }
+
+    @PostMapping("/{id}/submit-review")
+    @Operation(summary = "Gửi lại yêu cầu xét duyệt cơ sở thể thao (chuyển trạng thái sang PENDING)")
+    public ResponseEntity<ApiSuccessResponse<OwnerFacilityDto>> submitReviewFacility(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của cơ sở thể thao")
+            @PathVariable("id") String id
+    ) {
+        OwnerFacilityDto updated = ownerFacilityService.submitReviewFacility(authorizationHeader, id);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Đã gửi yêu cầu xét duyệt cơ sở thể thao cho Quản trị viên", updated)
+        );
     }
 }

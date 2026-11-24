@@ -3,6 +3,8 @@ package com.example.backend.services;
 import com.example.backend.dtos.facility.CreateFacilityRequest;
 import com.example.backend.dtos.facility.OwnerFacilityCourtDto;
 import com.example.backend.dtos.facility.OwnerFacilityDto;
+import com.example.backend.dtos.facility.UpdateFacilityRequest;
+import com.example.backend.dtos.facility.UpdateFacilityStatusRequest;
 import com.example.backend.dtos.response.ApiErrorResponse.FieldErrorDetail;
 import com.example.backend.exceptions.AppException;
 import com.example.backend.models.Court;
@@ -111,7 +113,217 @@ public class OwnerFacilityService {
 
     public OwnerFacilityDto getOwnerFacilityDetail(String authorizationHeader, String facilityId) {
         User owner = authenticateOwner(authorizationHeader);
+        Facility facility = findOwnedFacilityOrThrow(owner.getId(), facilityId);
+        return buildFacilityDetailDto(facility);
+    }
 
+    public OwnerFacilityDto createFacility(String authorizationHeader, CreateFacilityRequest request) {
+        User owner = authenticateOwner(authorizationHeader);
+
+        if (request == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu cơ sở thể thao không được để trống");
+        }
+
+        String name = request.getName() != null ? request.getName().trim().replaceAll("\\s+", " ") : "";
+        String description = request.getDescription() != null ? request.getDescription().trim() : "";
+
+        Address rawAddress = request.getAddress();
+        String province = rawAddress != null && rawAddress.getProvince() != null && !rawAddress.getProvince().trim().isEmpty()
+                ? rawAddress.getProvince().trim()
+                : "Đà Nẵng";
+        String district = rawAddress != null && rawAddress.getDistrict() != null ? rawAddress.getDistrict().trim() : "";
+        String ward = rawAddress != null && rawAddress.getWard() != null ? rawAddress.getWard().trim() : "";
+        String detail = rawAddress != null && rawAddress.getDetail() != null ? rawAddress.getDetail().trim() : "";
+
+        List<FieldErrorDetail> errors = new ArrayList<>();
+        validateFacilityFields(name, district, ward, detail, errors);
+        GeoJsonLocation validLocation = validateAndBuildLocation(request.getLocation(), errors);
+
+        if (!errors.isEmpty()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu cơ sở không hợp lệ", errors);
+        }
+
+        Address normalizedAddress = Address.builder()
+                .province(province)
+                .district(district)
+                .ward(ward)
+                .detail(detail)
+                .build();
+
+        List<ImageItem> normalizedImages = parseImageItems(request.getImages(), name);
+        List<String> normalizedAmenities = parseAmenities(request.getAmenities());
+
+        Instant now = Instant.now();
+        // Cơ sở thể thao mới tạo mặc định ở trạng thái PENDING để chờ Admin xét duyệt trước khi hoạt động
+        Facility newFacility = Facility.builder()
+                .ownerId(owner.getId())
+                .name(name)
+                .description(description)
+                .address(normalizedAddress)
+                .location(validLocation)
+                .images(normalizedImages)
+                .amenities(normalizedAmenities)
+                .status("PENDING")
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        Facility savedFacility = facilityRepository.save(newFacility);
+        return toDto(savedFacility, 0, null, Collections.emptyList());
+    }
+
+    public OwnerFacilityDto updateFacility(
+            String authorizationHeader,
+            String facilityId,
+            UpdateFacilityRequest request
+    ) {
+        User owner = authenticateOwner(authorizationHeader);
+        Facility facility = findOwnedFacilityOrThrow(owner.getId(), facilityId);
+
+        if (request == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu cập nhật cơ sở không được để trống");
+        }
+
+        String name = request.getName() != null
+                ? request.getName().trim().replaceAll("\\s+", " ")
+                : (facility.getName() != null ? facility.getName() : "");
+
+        String description = request.getDescription() != null
+                ? request.getDescription().trim()
+                : (facility.getDescription() != null ? facility.getDescription() : "");
+
+        Address existingAddr = facility.getAddress();
+        Address rawAddress = request.getAddress() != null ? request.getAddress() : existingAddr;
+
+        String province = rawAddress != null && rawAddress.getProvince() != null && !rawAddress.getProvince().trim().isEmpty()
+                ? rawAddress.getProvince().trim()
+                : (existingAddr != null && existingAddr.getProvince() != null ? existingAddr.getProvince() : "Đà Nẵng");
+        String district = rawAddress != null && rawAddress.getDistrict() != null
+                ? rawAddress.getDistrict().trim()
+                : (existingAddr != null && existingAddr.getDistrict() != null ? existingAddr.getDistrict() : "");
+        String ward = rawAddress != null && rawAddress.getWard() != null
+                ? rawAddress.getWard().trim()
+                : (existingAddr != null && existingAddr.getWard() != null ? existingAddr.getWard() : "");
+        String detail = rawAddress != null && rawAddress.getDetail() != null
+                ? rawAddress.getDetail().trim()
+                : (existingAddr != null && existingAddr.getDetail() != null ? existingAddr.getDetail() : "");
+
+        List<FieldErrorDetail> errors = new ArrayList<>();
+        validateFacilityFields(name, district, ward, detail, errors);
+
+        GeoJsonLocation validLocation = facility.getLocation();
+        if (request.getLocation() != null) {
+            validLocation = validateAndBuildLocation(request.getLocation(), errors);
+        }
+
+        if (!errors.isEmpty()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu cập nhật cơ sở không hợp lệ", errors);
+        }
+
+        facility.setName(name);
+        facility.setDescription(description);
+        facility.setAddress(Address.builder()
+                .province(province)
+                .district(district)
+                .ward(ward)
+                .detail(detail)
+                .build());
+        facility.setLocation(validLocation);
+
+        if (request.getImages() != null) {
+            facility.setImages(parseImageItems(request.getImages(), name));
+        }
+        if (request.getAmenities() != null) {
+            facility.setAmenities(parseAmenities(request.getAmenities()));
+        }
+
+        facility.setUpdatedAt(Instant.now());
+        Facility savedFacility = facilityRepository.save(facility);
+        return buildFacilityDetailDto(savedFacility);
+    }
+
+    public OwnerFacilityDto updateFacilityStatus(
+            String authorizationHeader,
+            String facilityId,
+            UpdateFacilityStatusRequest request
+    ) {
+        User owner = authenticateOwner(authorizationHeader);
+        Facility facility = findOwnedFacilityOrThrow(owner.getId(), facilityId);
+
+        String targetStatus = request != null && request.getStatus() != null
+                ? request.getStatus().trim().toUpperCase(Locale.ROOT)
+                : "";
+
+        if (targetStatus.isEmpty()) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "VALIDATION_ERROR",
+                    "Trạng thái cơ sở không được để trống",
+                    Collections.singletonList(new FieldErrorDetail("status", "REQUIRED", "Vui lòng chọn trạng thái"))
+            );
+        }
+
+        if (!Set.of("APPROVED", "INACTIVE", "PENDING").contains(targetStatus)) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_STATUS",
+                    "Trạng thái không hợp lệ. Chủ sân chỉ có thể chuyển giữa Đang hoạt động (APPROVED), Ngừng hoạt động (INACTIVE) hoặc Gửi duyệt lại (PENDING)."
+            );
+        }
+
+        String currentStatus = facility.getStatus() != null ? facility.getStatus().toUpperCase(Locale.ROOT) : "PENDING";
+
+        if ("SUSPENDED".equals(currentStatus)) {
+            throw new AppException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "FACILITY_SUSPENDED",
+                    "Cơ sở đang bị tạm đình chỉ (SUSPENDED) bởi Quản trị viên, không thể tự thay đổi trạng thái"
+            );
+        }
+
+        if ("APPROVED".equals(targetStatus)) {
+            if ("PENDING".equals(currentStatus) || "REJECTED".equals(currentStatus)) {
+                throw new AppException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "FACILITY_NOT_APPROVED_BY_ADMIN",
+                        "Cơ sở đang chờ Admin xét duyệt hoặc đã bị từ chối. Chủ sân không thể tự kích hoạt sang trạng thái APPROVED."
+                );
+            }
+        }
+
+        if ("PENDING".equals(targetStatus)) {
+            if (!"REJECTED".equals(currentStatus) && !"PENDING".equals(currentStatus)) {
+                throw new AppException(
+                        HttpStatus.UNPROCESSABLE_ENTITY,
+                        "INVALID_STATUS_TRANSITION",
+                        "Chỉ cơ sở bị từ chối (REJECTED) mới cần gửi yêu cầu xét duyệt lại (PENDING)"
+                );
+            }
+        }
+
+        facility.setStatus(targetStatus);
+        facility.setUpdatedAt(Instant.now());
+        Facility savedFacility = facilityRepository.save(facility);
+        return buildFacilityDetailDto(savedFacility);
+    }
+
+    public OwnerFacilityDto deactivateFacility(String authorizationHeader, String facilityId) {
+        return updateFacilityStatus(
+                authorizationHeader,
+                facilityId,
+                UpdateFacilityStatusRequest.builder().status("INACTIVE").build()
+        );
+    }
+
+    public OwnerFacilityDto submitReviewFacility(String authorizationHeader, String facilityId) {
+        return updateFacilityStatus(
+                authorizationHeader,
+                facilityId,
+                UpdateFacilityStatusRequest.builder().status("PENDING").build()
+        );
+    }
+
+    private Facility findOwnedFacilityOrThrow(String ownerId, String facilityId) {
         if (facilityId == null || facilityId.isBlank()) {
             throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_FACILITY_ID", "Mã cơ sở thể thao không hợp lệ");
         }
@@ -123,7 +335,7 @@ public class OwnerFacilityService {
                         "Không tìm thấy cơ sở thể thao"
                 ));
 
-        if (!owner.getId().equals(facility.getOwnerId())) {
+        if (!ownerId.equals(facility.getOwnerId())) {
             throw new AppException(
                     HttpStatus.NOT_FOUND,
                     "FACILITY_NOT_FOUND",
@@ -131,6 +343,10 @@ public class OwnerFacilityService {
             );
         }
 
+        return facility;
+    }
+
+    private OwnerFacilityDto buildFacilityDetailDto(Facility facility) {
         List<Court> facilityCourts = courtRepository.findByFacilityIdOrderByCreatedAtAsc(facility.getId());
         List<String> courtIds = new ArrayList<>();
         Set<String> categoryIds = new LinkedHashSet<>();
@@ -195,26 +411,13 @@ public class OwnerFacilityService {
         return toDto(facility, facilityCourts.size(), hoursSummary, courtDtos);
     }
 
-    public OwnerFacilityDto createFacility(String authorizationHeader, CreateFacilityRequest request) {
-        User owner = authenticateOwner(authorizationHeader);
-
-        if (request == null) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu cơ sở thể thao không được để trống");
-        }
-
-        String name = request.getName() != null ? request.getName().trim().replaceAll("\\s+", " ") : "";
-        String description = request.getDescription() != null ? request.getDescription().trim() : "";
-
-        Address rawAddress = request.getAddress();
-        String province = rawAddress != null && rawAddress.getProvince() != null && !rawAddress.getProvince().trim().isEmpty()
-                ? rawAddress.getProvince().trim()
-                : "Đà Nẵng";
-        String district = rawAddress != null && rawAddress.getDistrict() != null ? rawAddress.getDistrict().trim() : "";
-        String ward = rawAddress != null && rawAddress.getWard() != null ? rawAddress.getWard().trim() : "";
-        String detail = rawAddress != null && rawAddress.getDetail() != null ? rawAddress.getDetail().trim() : "";
-
-        List<FieldErrorDetail> errors = new ArrayList<>();
-
+    private void validateFacilityFields(
+            String name,
+            String district,
+            String ward,
+            String detail,
+            List<FieldErrorDetail> errors
+    ) {
         if (name.isEmpty()) {
             errors.add(new FieldErrorDetail("name", "REQUIRED", "Tên cơ sở thể thao không được để trống"));
         } else if (name.length() < 3 || name.length() > 150) {
@@ -232,58 +435,27 @@ public class OwnerFacilityService {
         if (detail.isEmpty()) {
             errors.add(new FieldErrorDetail("address.detail", "REQUIRED", "Địa chỉ chi tiết không được để trống"));
         }
+    }
 
-        GeoJsonLocation validLocation = null;
-        if (request.getLocation() != null && request.getLocation().getCoordinates() != null
-                && !request.getLocation().getCoordinates().isEmpty()) {
-            List<Double> coords = request.getLocation().getCoordinates();
-            if (coords.size() != 2 || coords.get(0) == null || coords.get(1) == null) {
-                errors.add(new FieldErrorDetail("location.coordinates", "INVALID_FORMAT", "Tọa độ phải gồm [longitude, latitude]"));
-            } else {
-                double longitude = coords.get(0);
-                double latitude = coords.get(1);
-                if (longitude < -180.0 || longitude > 180.0 || latitude < -90.0 || latitude > 90.0) {
-                    errors.add(new FieldErrorDetail("location.coordinates", "OUT_OF_RANGE", "Tọa độ kinh độ/vĩ độ không hợp lệ"));
-                } else {
-                    validLocation = GeoJsonLocation.builder()
-                            .type("Point")
-                            .coordinates(List.of(longitude, latitude))
-                            .build();
-                }
-            }
+    private GeoJsonLocation validateAndBuildLocation(GeoJsonLocation rawLocation, List<FieldErrorDetail> errors) {
+        if (rawLocation == null || rawLocation.getCoordinates() == null || rawLocation.getCoordinates().isEmpty()) {
+            return null;
         }
-
-        if (!errors.isEmpty()) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu cơ sở không hợp lệ", errors);
+        List<Double> coords = rawLocation.getCoordinates();
+        if (coords.size() != 2 || coords.get(0) == null || coords.get(1) == null) {
+            errors.add(new FieldErrorDetail("location.coordinates", "INVALID_FORMAT", "Tọa độ phải gồm [longitude, latitude]"));
+            return null;
         }
-
-        Address normalizedAddress = Address.builder()
-                .province(province)
-                .district(district)
-                .ward(ward)
-                .detail(detail)
+        double longitude = coords.get(0);
+        double latitude = coords.get(1);
+        if (longitude < -180.0 || longitude > 180.0 || latitude < -90.0 || latitude > 90.0) {
+            errors.add(new FieldErrorDetail("location.coordinates", "OUT_OF_RANGE", "Tọa độ kinh độ/vĩ độ không hợp lệ"));
+            return null;
+        }
+        return GeoJsonLocation.builder()
+                .type("Point")
+                .coordinates(List.of(longitude, latitude))
                 .build();
-
-        List<ImageItem> normalizedImages = parseImageItems(request.getImages(), name);
-        List<String> normalizedAmenities = parseAmenities(request.getAmenities());
-
-        Instant now = Instant.now();
-        // Cơ sở thể thao mới tạo mặc định ở trạng thái PENDING để chờ Admin xét duyệt trước khi hoạt động
-        Facility newFacility = Facility.builder()
-                .ownerId(owner.getId())
-                .name(name)
-                .description(description)
-                .address(normalizedAddress)
-                .location(validLocation)
-                .images(normalizedImages)
-                .amenities(normalizedAmenities)
-                .status("PENDING")
-                .createdAt(now)
-                .updatedAt(now)
-                .build();
-
-        Facility savedFacility = facilityRepository.save(newFacility);
-        return toDto(savedFacility, 0, null, Collections.emptyList());
     }
 
     private OwnerFacilityDto toDto(

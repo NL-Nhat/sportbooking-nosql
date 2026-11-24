@@ -80,10 +80,6 @@ export const facilityMockService = {
     };
   },
 
-  update: async (id, data) => {
-    return facRepo.update(id, data);
-  },
-
   reviewStatus: async (id, newStatus) => {
     return facRepo.update(id, { status: newStatus });
   }
