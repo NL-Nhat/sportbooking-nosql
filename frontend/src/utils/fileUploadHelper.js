@@ -1,28 +1,6 @@
-const UPLOAD_STORAGE_KEY = 'sb_mock_uploaded_files_v2';
+import { isAccessTokenExpired, refreshAccessToken, ApiClientError } from '../services/apiClient.js';
 
-function loadUploadedFilesMap() {
-  try {
-    const raw = localStorage.getItem(UPLOAD_STORAGE_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveUploadedFilesMap(map) {
-  try {
-    localStorage.setItem(UPLOAD_STORAGE_KEY, JSON.stringify(map));
-  } catch {
-    // Nếu localStorage đầy, giữ các mục mới nhất
-    try {
-      const entries = Object.entries(map);
-      const trimmed = Object.fromEntries(entries.slice(-15));
-      localStorage.setItem(UPLOAD_STORAGE_KEY, JSON.stringify(trimmed));
-    } catch {
-      // ignore
-    }
-  }
-}
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api/v1';
 
 export function sanitizeFileName(name = 'image.jpg') {
   return name
@@ -36,62 +14,75 @@ export function sanitizeFileName(name = 'image.jpg') {
 }
 
 /**
- * Tạo tên file kèm kí tự định danh duy nhất tránh trùng và lưu đường dẫn vào thư mục /uploads/
- * Đồng thời lưu bản DataURL trong bộ nhớ trình duyệt để demo hiển thị ảnh ngay lập tức.
+ * Tải file ảnh vật lý lên Backend (POST /api/v1/uploads/image).
+ * Backend lưu file trực tiếp vào thư mục frontend/public/uploads/<timestamp>_<randomId>_<fileName>
+ * và trả về đường dẫn "/uploads/<tên_file>" để lưu vào MongoDB.
  */
-export function uploadMockFile(file) {
-  return new Promise((resolve, reject) => {
-    if (!file) {
-      reject(new Error('Không có file nào được chọn.'));
-      return;
+export async function uploadFileToServer(file) {
+  if (!file) {
+    throw new Error('Không có file nào được chọn.');
+  }
+
+  let token = localStorage.getItem('sb_access_token');
+  if (token && isAccessTokenExpired(token)) {
+    try {
+      token = await refreshAccessToken();
+    } catch {
+      token = null;
     }
+  }
 
-    const uniqueToken = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-    const cleanName = sanitizeFileName(file.name);
-    const uniqueFileName = `${uniqueToken}_${cleanName}`;
-    // Đường dẫn lưu vào DB: trỏ tới thư mục /uploads/ trong frontend
-    const dbPath = `/uploads/${uniqueFileName}`;
+  const formData = new FormData();
+  formData.append('file', file);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result;
-      const map = loadUploadedFilesMap();
-      map[dbPath] = dataUrl;
-      map[uniqueFileName] = dataUrl;
-      saveUploadedFilesMap(map);
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}/uploads/image`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      },
+      body: formData
+    });
+  } catch {
+    throw new ApiClientError(
+      'Không thể kết nối tới máy chủ Backend (http://localhost:8081) để tải ảnh lên.',
+      { status: 0, errorCode: 'NETWORK_ERROR' }
+    );
+  }
 
-      resolve({
-        fileName: uniqueFileName,
-        originalName: file.name,
-        dbPath,
-        previewUrl: dataUrl
-      });
-    };
-    reader.onerror = () => {
-      reject(new Error('Không thể đọc file ảnh.'));
-    };
-    reader.readAsDataURL(file);
-  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || (payload && payload.success === false)) {
+    throw new ApiClientError(payload?.message || 'Tải file ảnh lên thất bại.', {
+      status: response.status,
+      errorCode: payload?.error?.code || 'UPLOAD_ERROR'
+    });
+  }
+
+  const data = payload?.data || {};
+  return {
+    fileName: data.fileName,
+    originalName: data.originalName || file.name,
+    dbPath: data.dbPath || data.url,
+    previewUrl: data.url || data.dbPath
+  };
 }
 
+// Giữ alias uploadMockFile trỏ sang uploadFileToServer để các trang chưa chuyển tên hàm vẫn lưu file vật lý thật vào frontend/public/uploads/
+export const uploadMockFile = uploadFileToServer;
+
 /**
- * Trả về URL hiển thị cho thẻ <img> từ giá trị lưu trong DB
- * Hỗ trợ cả chuỗi URL/path ('/uploads/...' hoặc 'https://...') và object { url, alt } theo Database_Design.md
+ * Trả về URL hiển thị cho thẻ <img> từ giá trị lưu trong DB.
+ * Hỗ trợ cả chuỗi URL/path ('/uploads/...' phục vụ trực tiếp từ thư mục frontend/public/uploads/ hoặc 'https://...')
+ * và object { url, alt } theo Database_Design.md.
  */
-export function resolveAssetUrl(input, fallback = 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?auto=format&fit=crop&w=800&q=80') {
+export function resolveAssetUrl(
+  input,
+  fallback = 'https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?auto=format&fit=crop&w=800&q=80'
+) {
   if (!input) return fallback;
   const rawPath = typeof input === 'object' ? (input.url || input.fileUrl || '') : String(input);
   if (!rawPath) return fallback;
-
-  if (rawPath.startsWith('data:') || rawPath.startsWith('blob:') || rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
-    return rawPath;
-  }
-
-  const map = loadUploadedFilesMap();
-  if (map[rawPath]) {
-    return map[rawPath];
-  }
-
   return rawPath;
 }
-

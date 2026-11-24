@@ -85,13 +85,14 @@
 - **Bước 8: Khách hàng Viết Đánh giá Sân & Xem Đánh giá (`reviews`, `facilities`)**
   - [ ] Làm API khách hàng gửi đánh giá sân sau khi hoàn thành buổi chơi (`POST /api/v1/reviews`):
     - Kiểm tra đơn `bookingId` thuộc về `currentUser.id`, có `status == "COMPLETED"`, và chưa từng được đánh giá (`409 Conflict` nếu đánh giá lần 2).
+    - Ảnh đính kèm được tải lên qua API `POST /api/v1/uploads/image` (lưu file ảnh vật lý trực tiếp vào thư mục `frontend/public/uploads/<timestamp>_<randomId>_<fileName>` và lưu đường dẫn `/uploads/<tên_file>` vào mảng `images`).
     - Lưu `rating` (`1..5`), `comment`, ảnh đính kèm `images` với `status = "VISIBLE"`.
     - Tự động tính lại điểm trung bình `avgRating` và tổng số lượt đánh giá `reviewCount` cập nhật vào bảng `facilities`.
   - [ ] Làm API lấy danh sách đánh giá công khai của cơ sở/sân (`GET /api/v1/reviews?facilityId=...&courtId=...`) và danh sách đánh giá của tôi (`GET /api/v1/reviews/me`).
   - [ ] Kết nối trang Viết đánh giá (`/account/reviews/new/:bookingId` — `CreateReviewPage.jsx`), Đánh giá của tôi (`/account/reviews` — `MyReviewsPage.jsx`) và mục đánh giá trên trang Chi tiết sân với API thật.
 
 - **Bước 9: Khách hàng Gửi Khiếu nại Đơn đặt sân & Xem Lịch sử Khiếu nại (`complaints`)**
-  - [ ] Làm API khách hàng gửi khiếu nại mới về đơn đặt sân (`POST /api/v1/complaints`): kiểm tra `bookingId` thuộc về `currentUser.id`, lưu `subject`, `content`, ảnh bằng chứng `images` với `status = "OPEN"`.
+  - [ ] Làm API khách hàng gửi khiếu nại mới về đơn đặt sân (`POST /api/v1/complaints`): kiểm tra `bookingId` thuộc về `currentUser.id`, tải ảnh minh chứng lên thư mục vật lý `frontend/public/uploads/` qua `POST /api/v1/uploads/image`, lưu `subject`, `content`, đường dẫn ảnh `images` (`/uploads/<timestamp>_<randomId>_<fileName>`) với `status = "OPEN"`.
   - [ ] Làm API xem danh sách khiếu nại của tôi (`GET /api/v1/complaints/me`) và xem chi tiết khiếu nại (`GET /api/v1/complaints/{id}`).
   - [ ] Kết nối 3 trang Khiếu nại của khách hàng (`/account/complaints`, `/account/complaints/new`, `/account/complaints/:id`) với API thật.
 
@@ -115,21 +116,22 @@
 ### B. Danh sách các chức năng nhỏ chi tiết (Theo đúng thứ tự thực hiện)
 
 - **Bước 1: Chủ sân Quản lý Cơ sở thể thao (`facilities`)**
-  - [ ] Làm API lấy danh sách cơ sở thuộc quyền sở hữu của Chủ sân (`GET /api/v1/owner/facilities`, lọc `ownerId == currentUser.id`, tìm kiếm theo tên, lọc theo `status`).
-  - [ ] Làm API tạo cơ sở thể thao mới (`POST /api/v1/owner/facilities`):
+  - [x] Làm API lấy danh sách cơ sở thuộc quyền sở hữu của Chủ sân (`GET /api/v1/owner/facilities`, lọc `ownerId == currentUser.id`, tìm kiếm theo tên, lọc theo `status`).
+  - [x] Làm API tạo cơ sở thể thao mới (`POST /api/v1/owner/facilities`):
     - Kiểm tra quyền `OWNER`.
-    - Lưu `name`, `description`, `address` (`street`, `ward`, `district`, `city`), tọa độ `location` (`type = "Point"`, `coordinates = [lng, lat]`), danh sách tiện ích `amenities`.
-    - Xử lý upload danh sách ảnh cơ sở (`images` với tên file kèm chuỗi định danh duy nhất).
-    - Khởi tạo `ownerId = currentUser.id`, `avgRating = 0.0`, `reviewCount = 0`, `status = "ACTIVE"`.
+    - Lưu `name`, `description`, `address` (`province`, `district`, `ward`, `detail`), tọa độ `location` (`type = "Point"`, `coordinates = [lng, lat]`), danh sách tiện ích `amenities`.
+    - Xử lý upload danh sách ảnh cơ sở qua `POST /api/v1/uploads/image` (lưu file ảnh vật lý trực tiếp vào thư mục `frontend/public/uploads/<timestamp>_<randomId>_<fileName>` và lưu đường dẫn `/uploads/<tên_file>` vào DB, không dùng `localStorage`).
+    - Khởi tạo `ownerId = currentUser.id`, **`status = "PENDING"` (Chờ Admin xét duyệt mới được phép hoạt động công khai)**.
   - [ ] Làm API xem chi tiết cơ sở (`GET /api/v1/owner/facilities/{id}`), cập nhật thông tin cơ sở (`PATCH /api/v1/owner/facilities/{id}`) và đổi trạng thái hoạt động (`PATCH /api/v1/owner/facilities/{id}/status`).
   - [ ] Kết nối giao diện Danh sách cơ sở (`/owner/facilities` — `OwnerFacilitiesPage.jsx`) và Form Thêm/Sửa cơ sở (`/owner/facilities/new`, `/owner/facilities/:id/edit` — `OwnerFacilityFormPage.jsx`) với API thật.
 
 - **Bước 2: Chủ sân Quản lý Sân thể thao & Thiết lập Khung giờ cho thuê mẫu (`courts`, `operating_hours`)**
-  - [ ] Làm API lấy danh sách các sân của Chủ sân (`GET /api/v1/owner/courts`): lọc theo cơ sở (`facilityId`), môn thể thao (`categoryId`), trạng thái (`ACTIVE`, `MAINTENANCE`, `INACTIVE`), tìm kiếm theo tên sân.
+  - [ ] Làm API lấy danh sách các sân của Chủ sân (`GET /api/v1/owner/courts`): lọc theo cơ sở (`facilityId`), môn thể thao (`categoryId`), trạng thái (`AVAILABLE`, `MAINTENANCE`, `INACTIVE`), tìm kiếm theo tên sân.
   - [ ] Làm API tạo sân mới kèm cấu hình khung giờ cho thuê trong ngày (`POST /api/v1/owner/courts`):
     - Kiểm tra `facilityId` thuộc quyền sở hữu của Chủ sân hiện tại và `categoryId` hợp lệ.
-    - Lưu thông tin sân vào collection `courts`: `facilityId`, `categoryId`, `name`, `description`, `attributes` (`surface`, `size`, `indoor`, `lighting`), `capacity`, danh sách ảnh `images`, `status = "ACTIVE"`.
-    - Lưu đồng thời danh sách khung giờ cho thuê mẫu vào collection `operating_hours`: nhận mảng `timeSlots` (ví dụ `[{ startTime: "06:00", endTime: "07:00" }, { startTime: "14:00", endTime: "16:00" }]`), kiểm tra `startTime < endTime` và không chồng lấn giờ, đặt `scheduleType = "DAILY"`, `status = "ACTIVE"`.
+    - Tải ảnh sân lên thư mục vật lý `frontend/public/uploads/` qua `POST /api/v1/uploads/image` và lưu đường dẫn `/uploads/<timestamp>_<randomId>_<fileName>` vào mảng `courts.images`.
+    - Lưu thông tin sân vào collection `courts`: `facilityId`, `categoryId`, `name`, `description`, `attributes` (`surface`, `size`, `indoor`, `lighting`), `capacity`, danh sách ảnh `images`, `status = "AVAILABLE"`.
+    - Lưu đồng thời danh sách khung giờ cho thuê mẫu vào collection `operating_hours`: nhận mảng `timeSlots` (ví dụ `[{ startTime: "06:00", endTime: "07:00" }, { startTime: "14:00", endTime: "16:00" }]`), kiểm tra `startTime < endTime` và không chồng lấn giờ, đặt `repeatMode = "DAILY"`.
   - [ ] Làm API xem chi tiết sân kèm `timeSlots` (`GET /api/v1/owner/courts/{id}`), cập nhật thông tin sân + khung giờ (`PATCH /api/v1/owner/courts/{id}`) và đổi trạng thái sân (`PATCH /api/v1/owner/courts/{id}/status`).
   - [ ] Kết nối giao diện Danh sách sân (`/owner/courts` — `OwnerCourtsPage.jsx`) và Form Thêm/Sửa sân (`/owner/courts/new`, `/owner/courts/:id/edit` — `OwnerCourtFormPage.jsx`) với API thật.
 
@@ -179,15 +181,15 @@
 # 3. THÀNH VIÊN 3 — QUẢN TRỊ VIÊN (`ADMIN`) & CÁC CHỨC NĂNG ĐỘC LẬP / LIÊN KẾT ĐỂ CÂN BẰNG CÔNG VIỆC
 
 ### A. Danh sách các chức năng chính cần làm trước (Theo thứ tự từ trên xuống)
-- **Bước 1:** *(Độc lập - Dùng chung)* Quản lý Hồ sơ cá nhân, Upload Avatar, Đổi mật khẩu & Quên mật khẩu (của cả khách hàng, chủ sân và admin)
+- **Bước 1:** *(Độc lập - Dùng chung)* Quản lý Hồ sơ cá nhân, Upload Avatar, Đổi mật khẩu & Quên mật khẩu (của cả khách hàng, chủ sân và admin).
 - **Bước 2:** *(Admin)* Quản lý Danh mục Môn thể thao (Thêm, Sửa, Ẩn/Hiện).
 - **Bước 3:** *(Luồng liên kết Khách hàng + Admin)* Khách hàng Gửi Hồ sơ đăng ký Chủ sân & Admin Xét duyệt / Từ chối Hồ sơ Chủ sân.
-- **Bước 4:** *(Admin)* Quản lý Danh sách Người dùng & Khóa / Mở khóa Tài khoản.
-- **Bước 5:** *(Admin)* Kiểm duyệt & Ẩn / Hiện các Đánh giá vi phạm trên hệ thống.
-- **Bước 6:** *(Admin)* Phân xử & Giải quyết Khiếu nại giữa Khách hàng và Chủ sân.
-- **Bước 7:** ** Quản lý Danh sách Cơ sở & Sân Yêu thích của khách hàng (`favorites`).
-- **Bước 8:** ** Hệ thống Thông báo (`notifications`), Chuông thông báo Header & Tổng quan Tài khoản.
-- **Bước 9:** *(Admin)* Dashboard Thống kê Tổng quan Admin, Cài đặt hệ thống & Các trang tĩnh.
+- **Bước 4:** *(Admin)* **Admin Xét duyệt / Từ chối Cơ sở thể thao mới do Chủ sân tạo (`PENDING` -> `APPROVED` / `REJECTED`)**.
+- **Bước 5:** *(Admin)* Quản lý Danh sách Người dùng & Khóa / Mở khóa Tài khoản.
+- **Bước 6:** *(Admin)* Kiểm duyệt & Ẩn / Hiện các Đánh giá vi phạm trên hệ thống.
+- **Bước 7:** *(Admin)* Phân xử & Giải quyết Khiếu nại giữa Khách hàng và Chủ sân.
+- **Bước 8:** Quản lý Danh sách Cơ sở & Sân Yêu thích của khách hàng (`favorites`).
+- **Bước 9:** Hệ thống Thông báo (`notifications`), Chuông thông báo Header, Tổng quan Tài khoản & Dashboard Thống kê Admin.
 
 ---
 
@@ -195,8 +197,8 @@
 
 - **Bước 1: Quản lý Hồ sơ cá nhân, Upload Avatar, Đổi mật khẩu & Quên mật khẩu (`users`, `auth_sessions`)**
   - [ ] Làm API lấy thông tin hồ sơ cá nhân hiện tại (`GET /api/v1/users/me`): trích xuất `userId` từ JWT Access Token, trả về thông tin đầy đủ (`id`, `fullName`, `email`, `phone`, `avatar`, `address`, `roles`, `ownerStatus`, `status`).
-  - [ ] Làm API cập nhật thông tin cá nhân (`PATCH /api/v1/users/me`): cho phép sửa `fullName`, `phone`, `address` (`street`, `ward`, `district`, `city`), kiểm tra trùng `phone` (`409 Conflict`) nếu đổi sang SĐT mới.
-  - [ ] Làm API upload và cập nhật ảnh đại diện (`POST /api/v1/users/me/avatar`): kiểm tra ảnh (`jpg`, `png`, `webp`) <= 5MB, sinh tên file kèm chuỗi định danh duy nhất và lưu vào `users.avatar`.
+  - [ ] Làm API cập nhật thông tin cá nhân (`PATCH /api/v1/users/me`): cho phép sửa `fullName`, `phone`, `address` (`province`, `district`, `ward`, `detail`), kiểm tra trùng `phone` (`409 Conflict`) nếu đổi sang SĐT mới.
+  - [ ] Làm API upload và cập nhật ảnh đại diện (`POST /api/v1/users/me/avatar` hoặc dùng `POST /api/v1/uploads/image`): kiểm tra ảnh (`jpg`, `png`, `webp`) <= 5MB, **lưu file ảnh vật lý trực tiếp vào thư mục `frontend/public/uploads/<timestamp>_<randomId>_<fileName>`** và cập nhật đường dẫn `/uploads/<tên_file>` vào `users.avatar` (không dùng `localStorage`).
   - [ ] Làm API đổi mật khẩu khi đang đăng nhập (`POST /api/v1/auth/change-password`): kiểm tra `currentPassword` khớp với BCrypt hash trong DB, mã hóa `newPassword` (6–72 ký tự) và thu hồi các phiên đăng nhập cũ trong `auth_sessions`.
   - [ ] Làm API yêu cầu quên mật khẩu (`POST /api/v1/auth/forgot-password`) và đặt lại mật khẩu (`POST /api/v1/auth/reset-password`).
   - [ ] Kết nối giao diện Hồ sơ khách hàng (`/account/profile` — `ProfilePage.jsx`), Hồ sơ chủ sân (`/owner/profile` — `OwnerProfilePage.jsx`) và Quên mật khẩu (`/forgot-password` — `ForgotPasswordPage.jsx`) với API thật.
@@ -211,16 +213,24 @@
   - [ ] Làm API cho Khách hàng xem trạng thái hồ sơ đăng ký Chủ sân của mình (`GET /api/v1/owner-applications/me`).
   - [ ] Làm API cho Khách hàng gửi hồ sơ đăng ký trở thành Chủ sân (`POST /api/v1/owner-applications`):
     - Kiểm tra user chưa phải là `OWNER` và không có hồ sơ nào đang `PENDING`.
-    - Lưu `businessName`, `businessAddress`, `contactPhone` và upload ảnh giấy tờ xác minh (`identityCardUrl`, `businessLicenseUrl`).
+    - Tải ảnh giấy tờ xác minh (CCCD, Giấy phép kinh doanh) lên thư mục vật lý `frontend/public/uploads/` qua `POST /api/v1/uploads/image` và lưu đường dẫn `/uploads/<timestamp>_<randomId>_<fileName>` vào mảng `documents`.
+    - Lưu `businessName`, `businessAddress`, `contactPhone` và `documents`.
     - Tạo bản ghi `owner_applications` (`status = "PENDING"`) và cập nhật `users.ownerStatus = "PENDING"`.
   - [ ] Làm API cho Admin lấy danh sách hồ sơ đăng ký Chủ sân (`GET /api/v1/admin/owner-applications`, lọc theo `status`, tìm kiếm, phân trang) và xem chi tiết hồ sơ (`GET /api/v1/admin/owner-applications/{id}`).
   - [ ] Làm API cho Admin **Phê duyệt** hồ sơ Chủ sân (`POST /api/v1/admin/owner-applications/{id}/approve`):
     - Cập nhật `owner_applications`: `status = "APPROVED"`, `reviewedBy = adminId`, `reviewedAt = Instant.now()`.
     - Cập nhật `users`: thêm `"OWNER"` vào mảng `roles` (thành `["CUSTOMER", "OWNER"]`) và đặt `ownerStatus = "APPROVED"`.
   - [ ] Làm API cho Admin **Từ chối** hồ sơ Chủ sân (`POST /api/v1/admin/owner-applications/{id}/reject`): bắt buộc nhập lý do `rejectionReason`, cập nhật `status = "REJECTED"` ở cả `owner_applications` và `users.ownerStatus`.
-  - [ ] Kết nối cả 3 trang Frontend: trang Khách nộp hồ sơ (`/account/owner-application` — `OwnerApplicationPage.jsx`), trang Admin danh sách hồ sơ (`/admin/owner-applications` — `AdminOwnerApplicationsPage.jsx`) và Chi tiết hồ sơ (`/admin/owner-applications/:id` — `AdminOwnerApplicationDetailPage.jsx`) với API thật.
+  - [ ] Kết nối cả 3 trang Frontend: trang Khách nộp hồ sơ (`/account/owner-application` — `OwnerApplicationPage.jsx`), trang Admin danh sách hồ sơ (`/admin/owner-applications` — `AdminOwnerApplicationsPage.jsx`) và Chi tiết hồ sơ (`/admin/owner-applications/:id` — `AdminOwnerAppDetailPage.jsx`) với API thật.
 
-- **Bước 4: Admin Quản lý Danh sách Người dùng & Khóa / Mở khóa Tài khoản (`users`, `auth_sessions`)**
+- **Bước 4: Admin Xét duyệt / Từ chối Cơ sở thể thao mới của Chủ sân (`facilities`)**
+  - [x] Thiết kế giao diện trang Admin Xét duyệt Cơ sở thể thao (`/admin/facilities` — `AdminFacilitiesPage.jsx`): hiển thị danh sách cơ sở mới do Chủ sân tạo đang ở trạng thái `PENDING`, lọc theo trạng thái (`PENDING`, `APPROVED`, `REJECTED`, `SUSPENDED`, `INACTIVE`), xem chi tiết hình ảnh/tọa độ/tiện ích và nút Phê duyệt / Từ chối.
+  - [ ] Làm API Admin lấy danh sách toàn bộ cơ sở thể thao để xét duyệt (`GET /api/v1/admin/facilities?status=PENDING&keyword=...`).
+  - [ ] Làm API Admin **Phê duyệt** cơ sở thể thao mới (`PATCH /api/v1/admin/facilities/{id}/approve`): chuyển `facilities.status` từ `"PENDING"` sang `"APPROVED"` để cơ sở bắt đầu hoạt động và hiển thị công khai.
+  - [ ] Làm API Admin **Từ chối** cơ sở thể thao (`PATCH /api/v1/admin/facilities/{id}/reject`): chuyển `facilities.status` sang `"REJECTED"`.
+  - [ ] Kết nối trang `/admin/facilities` (`AdminFacilitiesPage.jsx`) với API thật.
+
+- **Bước 5: Admin Quản lý Danh sách Người dùng & Khóa / Mở khóa Tài khoản (`users`, `auth_sessions`)**
   - [ ] Làm API Admin lấy danh sách người dùng (`GET /api/v1/admin/users`): tìm kiếm theo `fullName`, `email`, `phone`; lọc theo vai trò (`CUSTOMER`, `OWNER`, `ADMIN`) và trạng thái (`ACTIVE`, `INACTIVE`, `BANNED`); phân trang.
   - [ ] Làm API Admin xem chi tiết người dùng (`GET /api/v1/admin/users/{id}`).
   - [ ] Làm API Admin khóa hoặc mở khóa tài khoản (`PATCH /api/v1/admin/users/{id}/status`):
@@ -228,33 +238,27 @@
     - Khi chuyển sang `"BANNED"` hoặc `"INACTIVE"`, tự động thu hồi toàn bộ các phiên đăng nhập đang hoạt động của user đó trong bảng `auth_sessions` (`revokedAt = Instant.now()`).
   - [ ] Kết nối giao diện Quản lý người dùng (`/admin/users` — `AdminUsersPage.jsx`) với API thật.
 
-- **Bước 5: Admin Kiểm duyệt & Ẩn / Hiện Đánh giá vi phạm (`reviews`, `facilities`)**
+- **Bước 6: Admin Kiểm duyệt & Ẩn / Hiện Đánh giá vi phạm (`reviews`, `facilities`)**
   - [ ] Làm API Admin lấy danh sách toàn bộ đánh giá trên hệ thống (`GET /api/v1/admin/reviews`): lọc theo số sao (`rating`), trạng thái (`VISIBLE`, `HIDDEN`), cơ sở (`facilityId`), phân trang.
   - [ ] Làm API Admin đổi trạng thái Ẩn / Hiện đánh giá (`PATCH /api/v1/admin/reviews/{id}/status`): khi ẩn hoặc hiện lại đánh giá, tự động tính lại `avgRating` và `reviewCount` của cơ sở (`facilities`) tương ứng.
   - [ ] Kết nối giao diện Kiểm duyệt đánh giá của Admin (`/admin/reviews` — `AdminReviewsPage.jsx`) với API thật.
 
-- **Bước 6: Admin Phân xử & Giải quyết Khiếu nại (`complaints`)**
+- **Bước 7: Admin Phân xử & Giải quyết Khiếu nại (`complaints`)**
   - [ ] Làm API Admin lấy danh sách toàn bộ khiếu nại trên sàn (`GET /api/v1/admin/complaints`, lọc theo `status`: `OPEN`, `IN_PROGRESS`, `RESOLVED`, `REJECTED`, `CLOSED`) và xem chi tiết khiếu nại (`GET /api/v1/admin/complaints/{id}`).
   - [ ] Làm API Admin cập nhật quyết định xử lý khiếu nại (`POST /api/v1/admin/complaints/{id}/resolve`): lưu vào sub-document `adminResolution: { resolvedBy: adminId, decision, note, resolvedAt: Instant.now() }` và cập nhật `status` (`RESOLVED`, `REJECTED` hoặc `CLOSED`).
   - [ ] Kết nối 2 trang Khiếu nại của Admin (`/admin/complaints` — `AdminComplaintsPage.jsx` và `/admin/complaints/:id` — `AdminComplaintDetailPage.jsx`) với API thật.
 
-- **Bước 7: Quản lý Danh sách Cơ sở & Sân Yêu thích (`favorites`)** *(Chức năng độc lập nhận thêm)*
+- **Bước 8: Quản lý Danh sách Cơ sở & Sân Yêu thích (`favorites`)** *(Chức năng độc lập nhận thêm)*
   - [ ] Làm API lấy danh sách Cơ sở & Sân yêu thích của người dùng (`GET /api/v1/favorites?targetType=FACILITY|COURT`): đính kèm thông tin chi tiết của Cơ sở (`facilities`) hoặc Sân (`courts`).
   - [ ] Làm API thêm vào danh sách yêu thích (`POST /api/v1/favorites`) và xóa khỏi yêu thích (`DELETE /api/v1/favorites/{id}`).
   - [ ] Kết nối trang Yêu thích (`/account/favorites` — `FavoritesPage.jsx`) và nút Trái tim trên trang Chi tiết cơ sở / Chi tiết sân với API thật.
 
-- **Bước 8: Hệ thống Thông báo & Trang Tổng quan Tài khoản (`notifications`)** *(Chức năng độc lập nhận thêm)*
-  - [ ] Xây dựng `NotificationService.createNotification(userId, type, title, body, referenceType, referenceId)` dùng chung toàn hệ thống để tạo thông báo khi Đặt sân, Thanh toán, Duyệt hồ sơ Chủ sân hoặc Giải quyết khiếu nại.
+- **Bước 9: Hệ thống Thông báo, Trang Tổng quan Tài khoản & Dashboard Thống kê Admin (`notifications`)**
+  - [ ] Xây dựng `NotificationService.createNotification(userId, type, title, body, referenceType, referenceId)` dùng chung toàn hệ thống để tạo thông báo khi Đặt sân, Thanh toán, Duyệt hồ sơ Chủ sân, Duyệt cơ sở thể thao hoặc Giải quyết khiếu nại.
   - [ ] Làm API lấy danh sách thông báo của người dùng hiện tại (`GET /api/v1/notifications`) và đếm số thông báo chưa đọc (`GET /api/v1/notifications/unread-count`).
   - [ ] Làm API đánh dấu đã đọc 1 thông báo (`PATCH /api/v1/notifications/{id}/read`) và đánh dấu đọc tất cả (`POST /api/v1/notifications/read-all`).
   - [ ] Kết nối chuông thông báo trên `PublicHeader.jsx`, trang Thông báo (`/account/notifications` — `NotificationsPage.jsx`) và trang Tổng quan tài khoản (`/account` — `AccountOverviewPage.jsx`) với API thật, xóa `notificationMockService`.
-
-- **Bước 9: Dashboard Thống kê Tổng quan Admin, Cài đặt hệ thống & Các trang tĩnh**
-  - [ ] Làm API Thống kê tổng quan cho Admin Dashboard (`GET /api/v1/admin/dashboard/summary`):
-    - Đếm tổng số người dùng theo vai trò (`CUSTOMER`, `OWNER`, `ADMIN`), số tài khoản bị khóa (`BANNED`).
-    - Đếm số hồ sơ đăng ký Chủ sân đang chờ duyệt (`PENDING`), tổng số môn thể thao (`sports_categories`), cơ sở (`facilities`), sân (`courts`), tổng số đơn đặt sân (`bookings`) và số khiếu nại chờ xử lý (`complaints`).
-    - Trả về danh sách 5 hồ sơ đăng ký Chủ sân mới nhất và 5 khiếu nại mới nhất.
-  - [ ] Kết nối trang Admin Dashboard (`/admin` — `AdminDashboardPage.jsx`), Cài đặt hệ thống (`/admin/settings` — `AdminSettingsPage.jsx`) và biểu mẫu Liên hệ (`/contact` — `ContactPage.jsx`) với API thật.
+  - [ ] Làm API Thống kê tổng quan cho Admin Dashboard (`GET /api/v1/admin/dashboard/summary`): đếm người dùng theo vai trò, hồ sơ Chủ sân chờ duyệt (`PENDING`), cơ sở mới chờ duyệt (`PENDING`), môn thể thao, đánh giá và khiếu nại; kết nối trang `/admin` (`AdminDashboardPage.jsx`).
 
 ---
 

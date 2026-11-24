@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Uploaded user images (keep folder with .gitkeep, ignore uploaded files)
+public/uploads/*
+!public/uploads/.gitkeep

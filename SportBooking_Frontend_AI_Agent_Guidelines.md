@@ -109,7 +109,8 @@ Ba khu vực sử dụng chính:
 
 -   **Khách truy cập/Customer:** tìm sân, xem lịch trống, chọn một hoặc nhiều khung giờ trên cùng một sân (multi-slot), thanh toán tiền cọc 20% (`DEPOSIT_20_PERCENT`) hoặc thanh toán đủ 100% (`FULL_PAYMENT`) trong thời gian giữ chỗ 1 giờ (`HOLD`), thanh toán phần còn lại (`REMAINING`), hủy đơn & hoàn tiền trong vòng 24 giờ kể từ khi tạo đơn, đánh giá, khiếu nại và quản lý phiên đăng nhập (`auth_sessions`).
 -   **Owner:** quản lý cơ sở, sân, mẫu lịch hoạt động hằng ngày (`DAILY`), quy tắc giá (`specificDates` & `daysOfWeek`), lịch chặn sân, booking, đánh giá, khiếu nại và doanh thu của cơ sở mình.
--   **Admin (phạm vi giới hạn theo v2.0):** chỉ quản lý tài khoản người dùng (`users`), xét duyệt hồ sơ đăng ký Owner (`owner_applications`), quản lý danh mục thể thao (`sports_categories`), kiểm duyệt ẩn/hiện đánh giá (`reviews`) và xử lý khiếu nại (`complaints`). **Admin không có chức năng quản lý cơ sở/sân, không vận hành booking toàn hệ thống, không quản lý thanh toán/doanh thu toàn cục và không có chức năng khuyến mãi.**
+-   **Admin (phạm vi giới hạn theo v2.0):** quản lý tài khoản người dùng (`users`), xét duyệt hồ sơ đăng ký Owner (`owner_applications`), **xét duyệt cơ sở thể thao mới do Chủ sân tạo (`facilities`: `PENDING` -> `APPROVED` / `REJECTED`)**, quản lý danh mục thể thao (`sports_categories`), kiểm duyệt ẩn/hiện đánh giá (`reviews`) và xử lý khiếu nại (`complaints`). **Admin không vận hành sân con, không vận hành booking toàn hệ thống, không quản lý thanh toán/doanh thu toàn cục và không có chức năng khuyến mãi.**
+-   **Quy chuẩn Upload File Ảnh toàn hệ thống:** Tất cả các chức năng có tải ảnh lên (Avatar người dùng, Giấy tờ đăng ký Chủ sân, Ảnh cơ sở thể thao, Ảnh sân, Ảnh đánh giá, Ảnh minh chứng khiếu nại) đều gọi API Backend (`POST /api/v1/uploads/image` hoặc `POST /api/v1/uploads/images`) thông qua `uploadFileToServer(file)` trong `fileUploadHelper.js` để **lưu file ảnh vật lý trực tiếp vào thư mục `frontend/public/uploads/<timestamp>_<randomId>_<fileName>`** và lưu đường dẫn `/uploads/<tên_file>` vào MongoDB (tuyệt đối không lưu tạm Base64 trong `localStorage`).
 
 ## 2.2. Tính cách thiết kế
 
@@ -666,14 +667,15 @@ hoặc trạng thái.
 
 ## 5.5. Admin -- Quản trị hệ thống (Phạm vi giới hạn theo v2.0)
 
-> **Lưu ý quan trọng (v2.0):** Admin **KHÔNG** có các trang quản lý cơ sở (`/admin/facilities`), quản lý sân (`/admin/courts`), quản lý booking (`/admin/bookings`), quản lý thanh toán (`/admin/payments`), quản lý khuyến mãi (`/admin/promotions`) hay báo cáo doanh thu (`/admin/reports`).
+> **Lưu ý quan trọng (v2.0):** Admin có trang **Xét duyệt cơ sở thể thao (`/admin/facilities`)** để duyệt các cơ sở mới do Chủ sân tạo (`PENDING` -> `APPROVED` / `REJECTED`). Admin **KHÔNG** có các trang quản lý sân con (`/admin/courts`), quản lý booking (`/admin/bookings`), quản lý thanh toán (`/admin/payments`), quản lý khuyến mãi (`/admin/promotions`) hay báo cáo doanh thu (`/admin/reports`).
 
   ------------------------------------------------------------------------------------------------
   Mã                Route                             Giao diện         Chi tiết
   ----------------- --------------------------------- ----------------- --------------------------
   ADM-01            `/admin`                          Dashboard Admin   KPI người dùng, hồ sơ
-                                                                        Owner chờ duyệt, đánh giá
-                                                                        & khiếu nại cần xử lý
+                                                                        Owner chờ duyệt, cơ sở mới
+                                                                        chờ duyệt, đánh giá &
+                                                                        khiếu nại cần xử lý
 
   ADM-02            `/admin/users`                    Quản lý người     Search, role/status
                                                       dùng              filter, pagination, khóa/
@@ -690,6 +692,10 @@ hoặc trạng thái.
 
   ADM-06            `/admin/owner-applications/:id`   Chi tiết hồ sơ    Thông tin, giấy tờ
                                                       Owner             preview, approve/reject
+
+  ADM-07            `/admin/facilities`               Duyệt cơ sở thể   Danh sách cơ sở Chủ sân
+                                                      thao              tạo, xem chi tiết, duyệt
+                                                                        (`APPROVED`) / từ chối (`REJECTED`)
 
   ADM-11            `/admin/categories`               Danh mục thể thao CRUD danh mục, icon,
                                                                         status

@@ -144,7 +144,7 @@ người dùng. Một user có thể đồng thời là Customer và Owner.
   `phone`              String                   Không         Số điện thoại
                                                               liên hệ
 
-  `avatar`             String                   Không         Đường dẫn file ảnh đại diện đã upload (`/uploads/<timestamp>_<randomId>_<fileName>`)
+  `avatar`             String                   Không         Đường dẫn file ảnh đại diện đã upload vật lý vào thư mục `frontend/public/uploads/` và lưu đường dẫn vào DB (`/uploads/<timestamp>_<randomId>_<fileName>`)
 
   `address`            Object                   Không         Địa chỉ hồ sơ
                                                               dạng nhúng
@@ -303,7 +303,7 @@ duyệt của Admin.
                                                                     giấy tờ minh
                                                                     chứng
 
-  `documents[].fileUrl`        String                   Có nếu có   Đường dẫn file đã upload (`/uploads/<timestamp>_<randomId>_<fileName>`)
+  `documents[].fileUrl`        String                   Có nếu có   Đường dẫn file ảnh giấy tờ đã upload vật lý vào thư mục `frontend/public/uploads/` và lưu vào DB (`/uploads/<timestamp>_<randomId>_<fileName>`)
                                                         document    
 
   `documents[].fileName`       String                   Có nếu có   Tên file lưu kèm ký tự định danh tránh trùng
@@ -404,9 +404,9 @@ có thể chứa nhiều sân.
                                                     location   
                                                     có         
 
-  `images`                 Array`<Object>`{=html}   Không      Ảnh cơ sở (tải lên qua upload file)
+  `images`                 Array`<Object>`{=html}   Không      Ảnh cơ sở (tải lên qua API upload file, lưu file vật lý vào `frontend/public/uploads/`)
 
-  `images[].url`           String                   Có nếu có  Đường dẫn ảnh đã upload kèm
+  `images[].url`           String                   Có nếu có  Đường dẫn ảnh đã upload vật lý vào `frontend/public/uploads/` kèm
                                                     image      định danh tránh trùng (`/uploads/<timestamp>_<randomId>_<fileName>`)
 
   `images[].alt`           String                   Không      Mô tả ảnh
@@ -424,10 +424,9 @@ có thể chứa nhiều sân.
   --------------------------------------------------------------------------------------
 
 **Ràng buộc:** - `ownerId` phải là user đã được duyệt OWNER. - Facility
-mới mặc định PENDING; chỉ APPROVED mới công khai. - Owner chỉ đọc/sửa
+mới tạo bởi Owner mặc định có `status = "PENDING"`, phải chờ Admin xét duyệt chuyển sang `APPROVED` mới được hoạt động và hiển thị công khai. - Owner chỉ đọc/sửa
 facility của mình. - Tọa độ GeoJSON theo thứ tự longitude trước
-latitude. - Admin không có chức năng quản lý facility/court theo phạm vi
-chức năng đã chốt; Owner quản lý cơ sở của mình.
+latitude. - Admin có chức năng xét duyệt / từ chối cơ sở thể thao mới do Owner tạo (`PENDING` -> `APPROVED` / `REJECTED`).
 
 **Index đề xuất:** `{ownerId: 1, status: 1}`;
 `{status: 1, createdAt: -1}`; `2dsphere` trên `location`.
@@ -447,8 +446,8 @@ tính, sức chứa và trạng thái.
   `name`            String                   Có                Tên/mã hiển thị sân
   `description`     String                   Không             Mô tả sân
   `attributes`      Object                   Không             Thuộc tính linh hoạt theo môn
-  `images`          Array`<Object>`{=html}   Không             Ảnh sân (tải lên qua upload file)
-  `images[].url`    String                   Có nếu có image   Đường dẫn ảnh đã upload kèm định danh tránh trùng (`/uploads/<timestamp>_<randomId>_<fileName>`)
+  `images`          Array`<Object>`{=html}   Không             Ảnh sân (tải lên qua API upload file, lưu vật lý vào `frontend/public/uploads/`)
+  `images[].url`    String                   Có nếu có image   Đường dẫn ảnh đã upload vật lý vào `frontend/public/uploads/` kèm định danh tránh trùng (`/uploads/<timestamp>_<randomId>_<fileName>`)
   `images[].alt`    String                   Không             Mô tả ảnh
   `capacity`        Int32                    Không             Sức chứa/số người phù hợp
   `status`          String                   Có                AVAILABLE, MAINTENANCE, INACTIVE
@@ -846,7 +845,7 @@ thành booking.
   `courtId`                ObjectId                 Có                Sân liên quan
   `rating`                 Int32                    Có                Điểm 1--5
   `content`                String                   Không             Nội dung đánh giá
-  `images`                 Array`<String>`{=html}   Không             Đường dẫn file ảnh đã upload (`/uploads/<timestamp>_<randomId>_<fileName>`)
+  `images`                 Array`<String>`{=html}   Không             Đường dẫn file ảnh đã upload vật lý vào `frontend/public/uploads/` (`/uploads/<timestamp>_<randomId>_<fileName>`)
   `ownerReply`             Object                   Không             Phản hồi của Owner
   `ownerReply.content`     String                   Có nếu có reply   Nội dung phản hồi
   `ownerReply.repliedAt`   Date                     Có nếu có reply   Thời điểm phản hồi
@@ -949,7 +948,7 @@ xử lý từ Owner/Admin.
                                                                  nại
 
   `images`                 Array`<String>`{=html}   Không        Đường dẫn file ảnh minh chứng
-                                                                 đã upload (`/uploads/<timestamp>_<randomId>_<fileName>`)
+                                                                 đã upload vật lý vào `frontend/public/uploads/` (`/uploads/<timestamp>_<randomId>_<fileName>`)
 
   `response`               Object                   Không        Phản hồi xử lý
                                                                  hiện tại

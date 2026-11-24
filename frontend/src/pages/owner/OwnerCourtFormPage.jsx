@@ -6,7 +6,7 @@ import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import { ROUTES } from '../../constants/routes.js';
 import { CATEGORY_IDS } from '../../../mock/fixtures/ids.js';
-import { uploadMockFile, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
+import { uploadFileToServer, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
 import { ArrowLeft, Save, Plus, Trash2, Clock, Upload, Image as ImageIcon } from 'lucide-react';
 
 const toMinutes = (t) => {
@@ -91,7 +91,7 @@ export function OwnerCourtFormPage() {
     if (files.length === 0) return;
 
     try {
-      const uploaded = await Promise.all(files.map((f) => uploadMockFile(f)));
+      const uploaded = await Promise.all(files.map((f) => uploadFileToServer(f)));
       const newPaths = uploaded.map((u) => u.dbPath);
       setImages((prev) => [...newPaths, ...prev.filter((p) => !p.includes('unsplash.com'))]);
       showToast(`Đã tải lên ${uploaded.length} ảnh (lưu định danh: ${uploaded[0].fileName})`, 'success');

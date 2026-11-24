@@ -4,7 +4,7 @@ import { bookingMockService } from '../../../mock/services/bookingMockService.js
 import { reviewMockService } from '../../../mock/services/reviewMockService.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
-import { uploadMockFile, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
+import { uploadFileToServer, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
 import { ROUTES } from '../../constants/routes.js';
 import { Star, Send, ArrowLeft, Upload } from 'lucide-react';
 
@@ -33,7 +33,7 @@ export function CreateReviewPage() {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
     try {
-      const uploaded = await Promise.all(files.map((f) => uploadMockFile(f)));
+      const uploaded = await Promise.all(files.map((f) => uploadFileToServer(f)));
       setImages((prev) => [...prev, ...uploaded.map((u) => u.dbPath)]);
       showToast(`Đã tải lên ${uploaded.length} ảnh đánh giá.`, 'success');
     } catch (err) {

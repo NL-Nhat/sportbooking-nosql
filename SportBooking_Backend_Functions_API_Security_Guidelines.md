@@ -114,9 +114,7 @@ khiếu nại và kiểm toán chi tiết.
   mục                                                         
   -------------------------------------------------------------------------
 
-**Giới hạn Admin:** Admin không có chức năng quản lý facility/court,
-quản lý booking toàn sàn hoặc quản lý payment. Admin có thể kiểm duyệt
-review, xử lý complaint và quản trị tài khoản/hồ sơ Owner.
+**Giới hạn Admin:** Admin không vận hành sân con, không quản lý booking toàn sàn hoặc quản lý payment. Admin thực hiện quản trị tài khoản, xét duyệt hồ sơ đăng ký Owner, **xét duyệt cơ sở thể thao mới do Owner tạo (`PENDING` -> `APPROVED` / `REJECTED`)**, quản lý danh mục môn thể thao, kiểm duyệt review và xử lý complaint.
 
 ## 3. Chuẩn API và response
 
@@ -964,9 +962,8 @@ Request:
 }
 ```
 
-Ràng buộc: `ownerId` từ principal; facility mới PENDING; chỉ APPROVED
-hiển thị công khai; Owner chỉ truy cập facility của mình; validate
-longitude/latitude; ảnh qua storage service, DB lưu metadata/URL.
+Ràng buộc: `ownerId` từ principal; facility mới tạo mặc định `status = "PENDING"` và phải chờ Admin xét duyệt (`APPROVED`) mới được hoạt động và hiển thị công khai; Owner chỉ truy cập facility của mình; validate
+longitude/latitude; ảnh tải lên qua API `POST /api/v1/uploads/image` (hoặc `/uploads/images`) được lưu thành file vật lý trực tiếp trong thư mục `frontend/public/uploads/<timestamp>_<randomId>_<fileName>` và lưu đường dẫn `/uploads/<tên_file>` vào MongoDB (không lưu tạm trong `localStorage`).
 
 ### 6.4 Quản lý sân
 
@@ -1176,18 +1173,17 @@ gian.
 
 ## 7. Chức năng Admin
 
-Admin không có chức năng quản lý cơ sở/sân, quản lý đơn đặt sân toàn sàn
-hoặc quản lý giao dịch thanh toán. Các nghiệp vụ vận hành cơ sở, sân,
-booking và payment thuộc Owner/Customer cùng các tích hợp hệ thống;
-Admin chỉ thực hiện các nhóm chức năng dưới đây.
+Admin không vận hành sân con, không quản lý đơn đặt sân toàn sàn
+hoặc quản lý giao dịch thanh toán. Admin thực hiện quản trị người dùng, duyệt hồ sơ Owner, **xét duyệt cơ sở thể thao mới của Owner**, quản lý danh mục môn thể thao, kiểm duyệt đánh giá và phân xử khiếu nại.
 
 ### 7.1 Dashboard quản trị giới hạn
 
   --------------------------------------------------------------------------
   API                                                Chức năng
   -------------------------------------------------- -----------------------
-  `GET /api/v1/admin/dashboard/summary`              Tổng quan tài khoản và
-                                                     hồ sơ Owner
+  `GET /api/v1/admin/dashboard/summary`              Tổng quan tài khoản,
+                                                     hồ sơ Owner và cơ sở
+                                                     chờ duyệt
 
   `GET /api/v1/admin/dashboard/users`                Thống kê user
 
@@ -1196,6 +1192,23 @@ Admin chỉ thực hiện các nhóm chức năng dưới đây.
 
 Ràng buộc: chỉ ADMIN; không cung cấp dashboard quản lý booking, payment,
 doanh thu hoặc vận hành sân bãi.
+
+### 7.1b Xét duyệt Cơ sở thể thao của Chủ sân
+
+  --------------------------------------------------------------------------
+  API                                                Chức năng
+  -------------------------------------------------- -----------------------
+  `GET /api/v1/admin/facilities`                     Danh sách cơ sở thể thao
+                                                     (lọc `PENDING`, `APPROVED`, `REJECTED`)
+
+  `PATCH /api/v1/admin/facilities/{id}/approve`      Admin phê duyệt cơ sở mới
+                                                     (`PENDING` -> `APPROVED`)
+
+  `PATCH /api/v1/admin/facilities/{id}/reject`       Admin từ chối cơ sở mới
+                                                     (`PENDING` -> `REJECTED`)
+  --------------------------------------------------------------------------
+
+Ràng buộc: Khi Owner tạo cơ sở mới, cơ sở có trạng thái `PENDING`; Admin kiểm tra thông tin và duyệt chuyển sang `APPROVED` thì cơ sở đó mới được phép hoạt động trên hệ thống.
 
 ### 7.2 Quản lý user
 

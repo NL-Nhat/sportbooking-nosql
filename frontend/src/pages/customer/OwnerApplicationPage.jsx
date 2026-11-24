@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { userMockService } from '../../../mock/services/userMockService.js';
 import { useToast } from '../../contexts/ToastContext.jsx';
-import { uploadMockFile, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
+import { uploadFileToServer, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
 import { ROUTES } from '../../constants/routes.js';
 import { 
   CheckCircle2, 
@@ -58,7 +58,7 @@ export function OwnerApplicationPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const uploaded = await uploadMockFile(file);
+      const uploaded = await uploadFileToServer(file);
       const docObj = {
         fileUrl: uploaded.dbPath,
         fileName: uploaded.fileName,

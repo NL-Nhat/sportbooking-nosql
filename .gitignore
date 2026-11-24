@@ -1,0 +1,3 @@
+# Uploaded user images (keep folder with .gitkeep, ignore uploaded files)
+frontend/public/uploads/*
+!frontend/public/uploads/.gitkeep
