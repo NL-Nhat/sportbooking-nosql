@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
+import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { courtMockService } from '../../../mock/services/courtMockService.js';
 import { formatDate } from '../../utils/formatters.js';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock } from 'lucide-react';
@@ -13,7 +14,7 @@ export function OwnerCalendarPage() {
 
   useEffect(() => {
     if (user) {
-      courtMockService.getByOwner(user._id).then(async (courtList) => {
+      ownerCourtService.getMyCourts().catch(() => []).then(async (courtList) => {
         setCourts(courtList);
         const data = [];
         for (const c of courtList) {

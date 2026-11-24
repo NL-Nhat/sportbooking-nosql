@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { bookingMockService } from '../../../mock/services/bookingMockService.js';
 import { ownerFacilityService } from '../../services/ownerFacilityService.js';
-import { courtMockService } from '../../../mock/services/courtMockService.js';
+import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
 import { ROUTES } from '../../constants/routes.js';
@@ -31,7 +31,7 @@ export function OwnerDashboardPage() {
     if (user) {
       Promise.all([
         ownerFacilityService.getMyFacilities().catch(() => []),
-        courtMockService.getByOwner(user._id),
+        ownerCourtService.getMyCourts().catch(() => []),
         bookingMockService.getOwnerBookings(user._id)
       ]).then(([facList, courtList, bookingList]) => {
         setFacilities(facList);

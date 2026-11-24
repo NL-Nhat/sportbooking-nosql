@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { bookingMockService } from '../../../mock/services/bookingMockService.js';
-import { courtMockService } from '../../../mock/services/courtMockService.js';
+import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { formatCurrency, formatDate, formatBookingTimeSlots } from '../../utils/formatters.js';
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
@@ -21,7 +21,7 @@ export function OwnerBookingsPage() {
     if (user) {
       Promise.all([
         bookingMockService.getOwnerBookings(user._id),
-        courtMockService.getByOwner(user._id)
+        ownerCourtService.getMyCourts().catch(() => [])
       ]).then(([bList, cList]) => {
         setBookings(bList);
         setCourts(cList);
