@@ -1,39 +1,53 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../../contexts/AuthContext.jsx';
-import { courtMockService } from '../../../mock/services/courtMockService.js';
+import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { ownerFacilityService } from '../../services/ownerFacilityService.js';
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
 import { resolveAssetUrl } from '../../utils/fileUploadHelper.js';
 import { ROUTES } from '../../constants/routes.js';
-import { Plus, Trophy, Edit, Eye, Search, Clock } from 'lucide-react';
+import { Plus, Trophy, Edit, Eye, Search, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 
 export function OwnerCourtsPage() {
-  const { user } = useAuth();
   const [courts, setCourts] = useState([]);
   const [facilities, setFacilities] = useState([]);
   const [selectedFac, setSelectedFac] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const fetchOwnerCourtsData = useCallback(async (facId = '', currentStatus = '') => {
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      const [courtList, facList] = await Promise.all([
+        ownerCourtService.getMyCourts({
+          facilityId: facId,
+          status: currentStatus
+        }),
+        ownerFacilityService.getMyFacilities()
+      ]);
+      setCourts(courtList);
+      setFacilities(facList);
+    } catch (err) {
+      setErrorMessage(err?.message || 'Không thể tải danh sách sân thể thao từ máy chủ.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    if (user) {
-      Promise.all([
-        courtMockService.getByOwner(user._id),
-        ownerFacilityService.getMyFacilities().catch(() => [])
-      ]).then(([courtList, facList]) => {
-        setCourts(courtList);
-        setFacilities(facList);
-        setLoading(false);
-      });
-    }
-  }, [user]);
+    fetchOwnerCourtsData(selectedFac, statusFilter);
+  }, [fetchOwnerCourtsData, selectedFac, statusFilter]);
 
   const filtered = courts.filter((c) => {
-    const matchFac = selectedFac === '' || c.facilityId === selectedFac;
-    const matchSearch = search.trim() === '' || c.name.toLowerCase().includes(search.toLowerCase());
-    return matchFac && matchSearch;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    const matchName = c.name?.toLowerCase().includes(q);
+    const matchFacName = c.facilityName?.toLowerCase().includes(q);
+    const matchCategoryName = c.categoryName?.toLowerCase().includes(q);
+    return Boolean(matchName || matchFacName || matchCategoryName);
   });
 
   return (
@@ -65,7 +79,7 @@ export function OwnerCourtsPage() {
             <input
               type="text"
               className="form-control"
-              placeholder="Tìm theo tên sân..."
+              placeholder="Tìm theo tên sân, môn hoặc cơ sở..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{ paddingRight: '36px' }}
@@ -80,9 +94,25 @@ export function OwnerCourtsPage() {
               onChange={(e) => setSelectedFac(e.target.value)}
             >
               <option value="">Tất cả các cơ sở</option>
-              {facilities.map((f) => (
-                <option key={f._id} value={f._id}>{f.name}</option>
-              ))}
+              {facilities.map((f) => {
+                const fId = f.id || f._id;
+                return (
+                  <option key={fId} value={fId}>{f.name}</option>
+                );
+              })}
+            </select>
+          </div>
+
+          <div style={{ flex: '0 0 220px' }}>
+            <select
+              className="form-control"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="">Tất cả trạng thái</option>
+              <option value="AVAILABLE">Sẵn sàng (AVAILABLE)</option>
+              <option value="MAINTENANCE">Đang bảo trì (MAINTENANCE)</option>
+              <option value="INACTIVE">Ngừng hoạt động (INACTIVE)</option>
             </select>
           </div>
         </div>
@@ -90,7 +120,32 @@ export function OwnerCourtsPage() {
 
       {/* Courts Table */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px' }}>Đang nạp danh sách sân...</div>
+        <div style={{ textAlign: 'center', padding: '60px' }}>Đang nạp danh sách sân từ máy chủ...</div>
+      ) : errorMessage ? (
+        <div className="card" style={{ padding: '32px', textAlign: 'center' }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '48px',
+            height: '48px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--sb-danger-bg)',
+            color: 'var(--sb-danger)',
+            marginBottom: '12px'
+          }}>
+            <AlertCircle size={24} />
+          </div>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '8px' }}>Không thể tải danh sách sân</h3>
+          <p style={{ color: 'var(--sb-text-secondary)', marginBottom: '16px' }}>{errorMessage}</p>
+          <button
+            type="button"
+            onClick={() => fetchOwnerCourtsData(selectedFac, statusFilter)}
+            className="btn btn-primary btn-sm"
+          >
+            <RefreshCw size={15} /> Thử lại
+          </button>
+        </div>
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={Trophy}
@@ -109,6 +164,7 @@ export function OwnerCourtsPage() {
               <tr>
                 <th>Ảnh</th>
                 <th>Tên sân</th>
+                <th>Môn thể thao</th>
                 <th>Cơ sở trực thuộc</th>
                 <th>Khung giờ cho thuê (Hằng ngày)</th>
                 <th>Mặt sân & Sức chứa</th>
@@ -118,12 +174,17 @@ export function OwnerCourtsPage() {
             </thead>
             <tbody>
               {filtered.map((court) => {
+                const courtId = court.id || court._id;
                 const slots = court.timeSlots || [];
                 const previewSlots = slots.slice(0, 4);
                 const moreCount = Math.max(0, slots.length - previewSlots.length);
+                const facilityName =
+                  court.facilityName ||
+                  facilities.find((f) => (f.id || f._id) === court.facilityId)?.name ||
+                  'Cơ sở';
 
                 return (
-                  <tr key={court._id}>
+                  <tr key={courtId}>
                     <td style={{ width: '80px' }}>
                       <img
                         src={resolveAssetUrl(court.images?.[0], 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&w=150&q=80')}
@@ -133,9 +194,16 @@ export function OwnerCourtsPage() {
                     </td>
                     <td>
                       <div style={{ fontWeight: 700, color: 'var(--sb-text-primary)' }}>{court.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--sb-text-muted)' }}>{court.attributes?.courtType || 'Tiêu chuẩn'}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--sb-text-muted)' }}>
+                        {court.attributes?.courtType || court.attributes?.size || 'Tiêu chuẩn'}
+                      </div>
                     </td>
-                    <td>{facilities.find(f => f._id === court.facilityId)?.name || 'Cơ sở'}</td>
+                    <td>
+                      <span className="badge badge-default">
+                        {court.categoryName || court.categoryCode || 'Thể thao'}
+                      </span>
+                    </td>
+                    <td>{facilityName}</td>
                     <td>
                       {slots.length === 0 ? (
                         <span style={{ fontSize: '0.78rem', color: 'var(--sb-text-muted)' }}>Chưa cấu hình</span>
@@ -168,7 +236,7 @@ export function OwnerCourtsPage() {
                       )}
                     </td>
                     <td>
-                      <div>{court.attributes?.surfaceType || 'Tiêu chuẩn'}</div>
+                      <div>{court.attributes?.surfaceType || court.attributes?.surface || 'Tiêu chuẩn'}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--sb-text-muted)' }}>
                         {court.attributes?.indoor ? 'Trong nhà' : 'Ngoài trời'} • {court.capacity || 4} người
                       </div>
@@ -178,10 +246,10 @@ export function OwnerCourtsPage() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>
-                        <Link to={`/courts/${court._id}`} className="btn btn-secondary btn-sm" title="Xem public">
+                        <Link to={`/courts/${courtId}`} className="btn btn-secondary btn-sm" title="Xem public">
                           <Eye size={14} />
                         </Link>
-                        <Link to={`/owner/courts/${court._id}/edit`} className="btn btn-primary btn-sm" title="Chỉnh sửa sân & khung giờ">
+                        <Link to={`/owner/courts/${courtId}/edit`} className="btn btn-primary btn-sm" title="Chỉnh sửa sân & khung giờ">
                           <Edit size={14} />
                         </Link>
                       </div>

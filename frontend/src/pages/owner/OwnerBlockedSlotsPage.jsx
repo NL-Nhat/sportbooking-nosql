@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
-import { courtMockService } from '../../../mock/services/courtMockService.js';
+import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { mockStorage } from '../../../mock/storage/mockStorage.js';
 import { formatDateTime } from '../../utils/formatters.js';
 import { Modal } from '../../components/ui/Modal.jsx';
@@ -23,7 +23,7 @@ export function OwnerBlockedSlotsPage() {
 
   const loadData = () => {
     if (user) {
-      courtMockService.getByOwner(user._id).then((courtList) => {
+      ownerCourtService.getMyCourts().catch(() => []).then((courtList) => {
         setCourts(courtList);
         if (courtList.length > 0 && !courtId) setCourtId(courtList[0]._id);
 

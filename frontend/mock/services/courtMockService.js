@@ -94,20 +94,6 @@ export const courtMockService = {
     return courtRepo.find((c) => c.facilityId === facilityId);
   },
 
-  getByOwner: async (ownerId) => {
-    const facilities = facRepo.find((f) => f.ownerId === ownerId);
-    const facIds = new Set(facilities.map((f) => f._id));
-    const courts = courtRepo.find((c) => facIds.has(c.facilityId));
-    return courts.map((c) => {
-      const op = opRepo.findOne((o) => o.courtId === c._id);
-      return {
-        ...c,
-        operatingHours: op ? [op] : [],
-        timeSlots: op?.timeSlots || []
-      };
-    });
-  },
-
   create: async (data) => {
     const { timeSlots, effectiveFrom, effectiveTo, ...courtPayload } = data;
     const newCourt = courtRepo.create(courtPayload);

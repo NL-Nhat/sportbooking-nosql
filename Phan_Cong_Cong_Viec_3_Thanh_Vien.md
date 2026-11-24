@@ -127,7 +127,7 @@
   - [x] Kết nối giao diện Danh sách cơ sở (`/owner/facilities` — `OwnerFacilitiesPage.jsx`) và Form Thêm/Sửa cơ sở (`/owner/facilities/new`, `/owner/facilities/:id/edit` — `OwnerFacilityFormPage.jsx`) với API thật.
 
 - **Bước 2: Chủ sân Quản lý Sân thể thao & Thiết lập Khung giờ cho thuê mẫu (`courts`, `operating_hours`)**
-  - [ ] Làm API lấy danh sách các sân của Chủ sân (`GET /api/v1/owner/courts`): lọc theo cơ sở (`facilityId`), môn thể thao (`categoryId`), trạng thái (`AVAILABLE`, `MAINTENANCE`, `INACTIVE`), tìm kiếm theo tên sân.
+  - [x] Làm API lấy danh sách các sân của Chủ sân (`GET /api/v1/owner/courts` và `GET /api/v1/owner/facilities/{facilityId}/courts`): lọc theo cơ sở (`facilityId`), môn thể thao (`categoryId`), trạng thái (`AVAILABLE`, `MAINTENANCE`, `INACTIVE`), tìm kiếm theo tên sân, kết nối giao diện `/owner/courts` (`OwnerCourtsPage.jsx`).
   - [ ] Làm API tạo sân mới kèm cấu hình khung giờ cho thuê trong ngày (`POST /api/v1/owner/courts`):
     - Kiểm tra `facilityId` thuộc quyền sở hữu của Chủ sân hiện tại và `categoryId` hợp lệ.
     - Tải ảnh sân lên thư mục vật lý `frontend/public/uploads/` qua `POST /api/v1/uploads/image` và lưu đường dẫn `/uploads/<timestamp>_<randomId>_<fileName>` vào mảng `courts.images`.

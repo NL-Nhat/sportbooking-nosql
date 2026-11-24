@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
-import { courtMockService } from '../../../mock/services/courtMockService.js';
+import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { mockStorage } from '../../../mock/storage/mockStorage.js';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import { Clock, Save, Plus, Trash2, Wand2, Info } from 'lucide-react';
@@ -57,7 +57,7 @@ export function OwnerOperatingHoursPage() {
 
   useEffect(() => {
     if (user) {
-      courtMockService.getByOwner(user._id).then((courtList) => {
+      ownerCourtService.getMyCourts().catch(() => []).then((courtList) => {
         setCourts(courtList);
         if (courtList.length > 0) setSelectedCourtId(courtList[0]._id);
         setLoading(false);
