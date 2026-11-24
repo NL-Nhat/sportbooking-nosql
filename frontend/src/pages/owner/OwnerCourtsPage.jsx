@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { courtMockService } from '../../../mock/services/courtMockService.js';
-import { facilityMockService } from '../../../mock/services/facilityMockService.js';
+import { ownerFacilityService } from '../../services/ownerFacilityService.js';
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
 import { resolveAssetUrl } from '../../utils/fileUploadHelper.js';
@@ -21,7 +21,7 @@ export function OwnerCourtsPage() {
     if (user) {
       Promise.all([
         courtMockService.getByOwner(user._id),
-        facilityMockService.getByOwner(user._id)
+        ownerFacilityService.getMyFacilities().catch(() => [])
       ]).then(([courtList, facList]) => {
         setCourts(courtList);
         setFacilities(facList);

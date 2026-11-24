@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { bookingMockService } from '../../../mock/services/bookingMockService.js';
-import { facilityMockService } from '../../../mock/services/facilityMockService.js';
+import { ownerFacilityService } from '../../services/ownerFacilityService.js';
 import { courtMockService } from '../../../mock/services/courtMockService.js';
 import { formatCurrency, formatDate } from '../../utils/formatters.js';
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
@@ -30,7 +30,7 @@ export function OwnerDashboardPage() {
   useEffect(() => {
     if (user) {
       Promise.all([
-        facilityMockService.getByOwner(user._id),
+        ownerFacilityService.getMyFacilities().catch(() => []),
         courtMockService.getByOwner(user._id),
         bookingMockService.getOwnerBookings(user._id)
       ]).then(([facList, courtList, bookingList]) => {
