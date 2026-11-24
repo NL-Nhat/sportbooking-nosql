@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { courtMockService } from '../../../mock/services/courtMockService.js';
-import { facilityMockService } from '../../../mock/services/facilityMockService.js';
+import { ownerFacilityService } from '../../services/ownerFacilityService.js';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import { ROUTES } from '../../constants/routes.js';
@@ -54,7 +54,7 @@ export function OwnerCourtFormPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    facilityMockService.getByOwner(user._id).then((facList) => {
+    ownerFacilityService.getMyFacilities().catch(() => []).then((facList) => {
       setFacilities(facList);
       if (facList.length > 0 && !facilityId) {
         setFacilityId(facList[0]._id);

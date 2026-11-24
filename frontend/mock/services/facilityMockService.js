@@ -80,18 +80,6 @@ export const facilityMockService = {
     };
   },
 
-  getByOwner: async (ownerId) => {
-    const list = facRepo.find((f) => f.ownerId === ownerId);
-    return list.map((fac) => {
-      const courts = courtRepo.find((c) => c.facilityId === fac._id);
-      return {
-        ...fac,
-        courtCount: courts.length,
-        hoursSummary: buildHoursSummary(courts)
-      };
-    });
-  },
-
   create: async (data) => {
     return facRepo.create({
       ...data,

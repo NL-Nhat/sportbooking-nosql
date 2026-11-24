@@ -69,6 +69,16 @@ public class JwtUtil {
     }
 
     public String extractSessionId(String token) {
+        Map<String, Object> claims = verifyAndExtractClaims(token);
+        return claims != null && claims.get("sid") instanceof String sid ? sid : null;
+    }
+
+    public String extractUserId(String token) {
+        Map<String, Object> claims = verifyAndExtractClaims(token);
+        return claims != null && claims.get("sub") instanceof String sub ? sub : null;
+    }
+
+    public Map<String, Object> verifyAndExtractClaims(String token) {
         if (token == null || token.isBlank()) {
             return null;
         }
@@ -87,7 +97,14 @@ public class JwtUtil {
             }
             byte[] payloadBytes = BASE64_URL_DECODER.decode(parts[1]);
             Map<String, Object> claims = objectMapper.readValue(payloadBytes, new TypeReference<Map<String, Object>>() {});
-            return claims.get("sid") instanceof String sid ? sid : null;
+            Object expObj = claims.get("exp");
+            if (expObj instanceof Number expNumber) {
+                long nowSeconds = Instant.now().getEpochSecond();
+                if (nowSeconds >= expNumber.longValue()) {
+                    return null;
+                }
+            }
+            return claims;
         } catch (Exception e) {
             return null;
         }
