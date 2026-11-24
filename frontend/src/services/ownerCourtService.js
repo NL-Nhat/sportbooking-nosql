@@ -11,7 +11,29 @@ function normalizeCourt(court) {
   };
 }
 
+function normalizeCategory(category) {
+  if (!category) return null;
+  const resolvedId = category.id || category._id;
+  return {
+    ...category,
+    id: resolvedId,
+    _id: resolvedId
+  };
+}
+
 export const ownerCourtService = {
+  /**
+   * Lấy danh sách danh mục môn thể thao đang hoạt động (ACTIVE)
+   * GET /api/v1/categories
+   */
+  getActiveCategories: async () => {
+    const response = await apiRequest('/categories', {
+      method: 'GET'
+    });
+    const list = Array.isArray(response?.data) ? response.data : [];
+    return list.map(normalizeCategory);
+  },
+
   /**
    * Lấy danh sách toàn bộ sân thể thao thuộc các cơ sở của Chủ sân đang đăng nhập
    * GET /api/v1/owner/courts
@@ -64,5 +86,63 @@ export const ownerCourtService = {
     });
     const list = Array.isArray(response?.data) ? response.data : [];
     return list.map(normalizeCourt);
+  },
+
+  /**
+   * Tạo sân thể thao mới kèm cấu hình khung giờ cho thuê hằng ngày (DAILY)
+   * POST /api/v1/owner/facilities/{facilityId}/courts
+   */
+  createCourt: async ({
+    facilityId,
+    categoryId,
+    name,
+    description,
+    attributes,
+    capacity,
+    status,
+    images,
+    timeSlots,
+    effectiveFrom,
+    effectiveTo
+  }) => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const normalizedTimeSlots = Array.isArray(timeSlots)
+      ? timeSlots.map((slot) => ({
+          startTime: slot.startTime,
+          endTime: slot.endTime
+        }))
+      : [];
+
+    const payload = {
+      facilityId,
+      categoryId,
+      name: name?.trim(),
+      description: description?.trim() || '',
+      attributes: attributes || {},
+      capacity: Number(capacity) || 4,
+      status: status || 'AVAILABLE',
+      images: Array.isArray(images)
+        ? images.map((img) => (typeof img === 'object' ? img : { url: img, alt: name?.trim() || 'Court image' }))
+        : [],
+      timeSlots: normalizedTimeSlots,
+      effectiveFrom: effectiveFrom || todayStr,
+      effectiveTo: effectiveTo || null,
+      operatingHours: {
+        repeatMode: 'DAILY',
+        effectiveFrom: effectiveFrom || todayStr,
+        effectiveTo: effectiveTo || null,
+        timeSlots: normalizedTimeSlots
+      }
+    };
+
+    const endpoint = facilityId
+      ? `/owner/facilities/${encodeURIComponent(facilityId)}/courts`
+      : '/owner/courts';
+
+    const response = await apiRequest(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return normalizeCourt(response?.data);
   }
 };

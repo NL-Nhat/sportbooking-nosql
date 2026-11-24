@@ -94,66 +94,6 @@ export const courtMockService = {
     return courtRepo.find((c) => c.facilityId === facilityId);
   },
 
-  create: async (data) => {
-    const { timeSlots, effectiveFrom, effectiveTo, ...courtPayload } = data;
-    const newCourt = courtRepo.create(courtPayload);
-    // Tự sinh hoặc lưu operating_hours mẫu DAILY (đúng schema DB v2.0: một document/court)
-    const now = new Date().toISOString();
-    let slotsToSave = Array.isArray(timeSlots) && timeSlots.length > 0 ? timeSlots : null;
-    if (!slotsToSave) {
-      slotsToSave = [];
-      for (let h = 6; h < 22; h++) {
-        slotsToSave.push({
-          startTime: `${String(h).padStart(2, '0')}:00`,
-          endTime: `${String(h + 1).padStart(2, '0')}:00`
-        });
-      }
-    }
-    const sortedSlots = [...slotsToSave].sort((a, b) => a.startTime.localeCompare(b.startTime));
-    opRepo.create({
-      courtId: newCourt._id,
-      repeatMode: "DAILY",
-      effectiveFrom: effectiveFrom || now.slice(0, 10),
-      effectiveTo: effectiveTo || null,
-      timeSlots: sortedSlots,
-      createdAt: now,
-      updatedAt: now
-    });
-
-    // Tự sinh 2 khung giá cơ bản (chuẩn DB v2.0 có specificDates)
-    priceRepo.create({
-      courtId: newCourt._id,
-      name: "Giờ chuẩn ngày thường",
-      daysOfWeek: [1, 2, 3, 4, 5],
-      specificDates: [],
-      startTime: "06:00",
-      endTime: "17:00",
-      pricePerSlot: 120000,
-      validFrom: "2026-01-01",
-      validTo: "2026-12-31",
-      priority: 1,
-      status: "ACTIVE",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-    priceRepo.create({
-      courtId: newCourt._id,
-      name: "Giờ cao điểm & cuối tuần",
-      daysOfWeek: [1, 2, 3, 4, 5, 6, 7],
-      specificDates: [],
-      startTime: "17:00",
-      endTime: "22:00",
-      pricePerSlot: 180000,
-      validFrom: "2026-01-01",
-      validTo: "2026-12-31",
-      priority: 2,
-      status: "ACTIVE",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    });
-    return newCourt;
-  },
-
   update: async (id, data) => {
     const { timeSlots, effectiveFrom, effectiveTo, ...courtPayload } = data;
     const updatedCourt = courtRepo.update(id, courtPayload);
