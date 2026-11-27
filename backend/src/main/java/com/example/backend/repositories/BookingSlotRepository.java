@@ -11,6 +11,8 @@ import java.util.List;
 @Repository
 public interface BookingSlotRepository extends MongoRepository<BookingSlot, String> {
 
+    List<BookingSlot> findByBookingId(String bookingId);
+
     List<BookingSlot> findByCourtIdAndStatusInAndEndAtGreaterThan(
             String courtId,
             Collection<String> statuses,
