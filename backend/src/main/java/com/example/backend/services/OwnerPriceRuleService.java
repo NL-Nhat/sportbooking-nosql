@@ -1,6 +1,8 @@
 package com.example.backend.services;
 
+import com.example.backend.dtos.pricing.CreatePriceRuleRequest;
 import com.example.backend.dtos.pricing.OwnerPriceRuleDto;
+import com.example.backend.dtos.response.ApiErrorResponse.FieldErrorDetail;
 import com.example.backend.exceptions.AppException;
 import com.example.backend.models.Court;
 import com.example.backend.models.Facility;
@@ -15,19 +17,29 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class OwnerPriceRuleService {
+
+    private static final Pattern TIME_HH_MM_PATTERN = Pattern.compile("^([01]\\d|2[0-3]):([0-5]\\d)$");
+    private static final Pattern DATE_YYYY_MM_DD_PATTERN = Pattern.compile("^\\d{4}-\\d{2}-\\d{2}$");
+    private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private final PriceRuleRepository priceRuleRepository;
     private final CourtRepository courtRepository;
@@ -100,6 +112,195 @@ public class OwnerPriceRuleService {
             result.add(toDto(rule, court, facility));
         }
         return result;
+    }
+
+    public OwnerPriceRuleDto createPriceRule(
+            String authorizationHeader,
+            String pathCourtId,
+            CreatePriceRuleRequest request
+    ) {
+        User owner = authenticateOwner(authorizationHeader);
+
+        if (request == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu quy tắc giá không được để trống");
+        }
+
+        String courtId = pathCourtId != null && !pathCourtId.isBlank()
+                ? pathCourtId.trim()
+                : (request.getCourtId() != null ? request.getCourtId().trim() : "");
+
+        String name = request.getName() != null ? request.getName().trim().replaceAll("\\s+", " ") : "";
+        String startTime = request.getStartTime() != null ? request.getStartTime().trim() : "";
+        String endTime = request.getEndTime() != null ? request.getEndTime().trim() : "";
+        BigDecimal pricePerSlot = request.getPricePerSlot();
+        Integer priority = request.getPriority() != null ? request.getPriority() : 1;
+
+        String status = request.getStatus() != null && !request.getStatus().trim().isEmpty()
+                ? request.getStatus().trim().toUpperCase(Locale.ROOT)
+                : "ACTIVE";
+
+        String validFrom = request.getValidFrom() != null && !request.getValidFrom().trim().isEmpty()
+                ? request.getValidFrom().trim()
+                : LocalDate.now(DEFAULT_ZONE).toString();
+
+        String validTo = request.getValidTo() != null && !request.getValidTo().trim().isEmpty()
+                ? request.getValidTo().trim()
+                : null;
+
+        List<FieldErrorDetail> errors = new ArrayList<>();
+
+        if (courtId.isEmpty()) {
+            errors.add(new FieldErrorDetail("courtId", "REQUIRED", "Vui lòng chọn sân thể thao áp dụng quy tắc giá"));
+        }
+
+        if (name.isEmpty()) {
+            errors.add(new FieldErrorDetail("name", "REQUIRED", "Tên quy tắc giá không được để trống"));
+        } else if (name.length() < 2 || name.length() > 150) {
+            errors.add(new FieldErrorDetail("name", "INVALID_LENGTH", "Tên quy tắc giá phải từ 2 đến 150 ký tự"));
+        }
+
+        if (!TIME_HH_MM_PATTERN.matcher(startTime).matches()) {
+            errors.add(new FieldErrorDetail("startTime", "INVALID_FORMAT", "Giờ bắt đầu phải có định dạng HH:mm"));
+        }
+        if (!TIME_HH_MM_PATTERN.matcher(endTime).matches()) {
+            errors.add(new FieldErrorDetail("endTime", "INVALID_FORMAT", "Giờ kết thúc phải có định dạng HH:mm"));
+        }
+        if (TIME_HH_MM_PATTERN.matcher(startTime).matches() && TIME_HH_MM_PATTERN.matcher(endTime).matches()) {
+            if (toMinutes(startTime) >= toMinutes(endTime)) {
+                errors.add(new FieldErrorDetail("endTime", "INVALID_RANGE", "Giờ bắt đầu phải nhỏ hơn giờ kết thúc"));
+            }
+        }
+
+        if (pricePerSlot == null || pricePerSlot.compareTo(BigDecimal.ZERO) <= 0) {
+            errors.add(new FieldErrorDetail("pricePerSlot", "INVALID_VALUE", "Đơn giá mỗi khung giờ (pricePerSlot) phải lớn hơn 0"));
+        }
+
+        if (priority < 1 || priority > 1000) {
+            errors.add(new FieldErrorDetail("priority", "OUT_OF_RANGE", "Độ ưu tiên (priority) phải từ 1 đến 1000"));
+        }
+
+        if (!Set.of("ACTIVE", "INACTIVE").contains(status)) {
+            errors.add(new FieldErrorDetail("status", "INVALID_VALUE", "Trạng thái quy tắc giá phải là ACTIVE hoặc INACTIVE"));
+        }
+
+        if (!DATE_YYYY_MM_DD_PATTERN.matcher(validFrom).matches()) {
+            errors.add(new FieldErrorDetail("validFrom", "INVALID_FORMAT", "Ngày bắt đầu hiệu lực (validFrom) phải có định dạng yyyy-MM-dd"));
+        }
+
+        if (validTo != null) {
+            if (!DATE_YYYY_MM_DD_PATTERN.matcher(validTo).matches()) {
+                errors.add(new FieldErrorDetail("validTo", "INVALID_FORMAT", "Ngày kết thúc hiệu lực (validTo) phải có định dạng yyyy-MM-dd"));
+            } else if (DATE_YYYY_MM_DD_PATTERN.matcher(validFrom).matches() && validTo.compareTo(validFrom) < 0) {
+                errors.add(new FieldErrorDetail("validTo", "INVALID_RANGE", "Ngày kết thúc hiệu lực (validTo) phải lớn hơn hoặc bằng ngày bắt đầu (validFrom)"));
+            }
+        }
+
+        List<Integer> normalizedDays = normalizeAndValidateDaysOfWeek(request.getDaysOfWeek(), errors);
+        List<String> normalizedSpecificDates = normalizeAndValidateSpecificDates(
+                request.getSpecificDates(),
+                validFrom,
+                validTo,
+                errors
+        );
+
+        if (normalizedDays.isEmpty() && normalizedSpecificDates.isEmpty()) {
+            errors.add(new FieldErrorDetail(
+                    "daysOfWeek",
+                    "REQUIRED",
+                    "Vui lòng chọn ít nhất một thứ trong tuần (1..7) hoặc một ngày áp dụng cụ thể (yyyy-MM-dd)"
+            ));
+        }
+
+        if (!errors.isEmpty()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu tạo quy tắc giá không hợp lệ", errors);
+        }
+
+        Court court = findOwnedCourtOrThrow(owner.getId(), courtId);
+        Facility facility = court.getFacilityId() != null
+                ? facilityRepository.findById(court.getFacilityId()).orElse(null)
+                : null;
+
+        Instant now = Instant.now();
+        PriceRule newRule = PriceRule.builder()
+                .courtId(court.getId())
+                .name(name)
+                .specificDates(normalizedSpecificDates)
+                .daysOfWeek(normalizedDays)
+                .startTime(startTime)
+                .endTime(endTime)
+                .pricePerSlot(pricePerSlot)
+                .validFrom(validFrom)
+                .validTo(validTo)
+                .priority(priority)
+                .status(status)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        PriceRule saved = priceRuleRepository.save(newRule);
+        return toDto(saved, court, facility);
+    }
+
+    private List<Integer> normalizeAndValidateDaysOfWeek(List<Integer> rawDays, List<FieldErrorDetail> errors) {
+        if (rawDays == null || rawDays.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<Integer> uniqueDays = new LinkedHashSet<>();
+        for (Integer day : rawDays) {
+            if (day == null || day < 1 || day > 7) {
+                errors.add(new FieldErrorDetail("daysOfWeek", "OUT_OF_RANGE", "Thứ trong tuần phải nằm trong khoảng từ 1 (Thứ 2) đến 7 (Chủ Nhật)"));
+                break;
+            }
+            uniqueDays.add(day);
+        }
+        List<Integer> sorted = new ArrayList<>(uniqueDays);
+        Collections.sort(sorted);
+        return sorted;
+    }
+
+    private List<String> normalizeAndValidateSpecificDates(
+            List<String> rawDates,
+            String validFrom,
+            String validTo,
+            List<FieldErrorDetail> errors
+    ) {
+        if (rawDates == null || rawDates.isEmpty()) {
+            return Collections.emptyList();
+        }
+        Set<String> uniqueDates = new LinkedHashSet<>();
+        boolean validBounds = DATE_YYYY_MM_DD_PATTERN.matcher(validFrom).matches()
+                && (validTo == null || DATE_YYYY_MM_DD_PATTERN.matcher(validTo).matches());
+
+        for (String raw : rawDates) {
+            if (raw == null || raw.trim().isEmpty()) {
+                continue;
+            }
+            String dateStr = raw.trim();
+            if (!DATE_YYYY_MM_DD_PATTERN.matcher(dateStr).matches()) {
+                errors.add(new FieldErrorDetail("specificDates", "INVALID_FORMAT", "Ngày cụ thể '" + dateStr + "' phải có định dạng yyyy-MM-dd"));
+                break;
+            }
+            if (validBounds) {
+                if (dateStr.compareTo(validFrom) < 0 || (validTo != null && dateStr.compareTo(validTo) > 0)) {
+                    errors.add(new FieldErrorDetail(
+                            "specificDates",
+                            "OUT_OF_VALIDITY_RANGE",
+                            "Ngày cụ thể '" + dateStr + "' phải nằm trong khoảng hiệu lực của quy tắc giá ("
+                                    + validFrom + (validTo != null ? " đến " + validTo : "") + ")"
+                    ));
+                    break;
+                }
+            }
+            uniqueDates.add(dateStr);
+        }
+        List<String> sorted = new ArrayList<>(uniqueDates);
+        Collections.sort(sorted);
+        return sorted;
+    }
+
+    private int toMinutes(String hhmm) {
+        String[] parts = hhmm.split(":");
+        return Integer.parseInt(parts[0]) * 60 + Integer.parseInt(parts[1]);
     }
 
     private Court findOwnedCourtOrThrow(String ownerId, String courtId) {

@@ -35,5 +35,47 @@ export const ownerPriceRuleService = {
     });
     const list = Array.isArray(response?.data) ? response.data : [];
     return list.map(normalizePriceRule);
+  },
+
+  /**
+   * Tạo quy tắc giá mới cho sân của Chủ sân
+   * POST /api/v1/owner/price-rules
+   */
+  createPriceRule: async ({
+    courtId,
+    name,
+    specificDates,
+    daysOfWeek,
+    startTime,
+    endTime,
+    pricePerSlot,
+    validFrom,
+    validTo,
+    priority,
+    status
+  }) => {
+    const payload = {
+      courtId,
+      name: name?.trim(),
+      specificDates: Array.isArray(specificDates) ? specificDates : [],
+      daysOfWeek: Array.isArray(daysOfWeek) ? daysOfWeek.map(Number) : [],
+      startTime,
+      endTime,
+      pricePerSlot: Number(pricePerSlot),
+      validFrom,
+      validTo: validTo && validTo.trim() ? validTo.trim() : null,
+      priority: Number(priority) || 1,
+      status: status || 'ACTIVE'
+    };
+
+    const endpoint = courtId
+      ? `/owner/courts/${encodeURIComponent(courtId)}/price-rules`
+      : '/owner/price-rules';
+
+    const response = await apiRequest(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    return normalizePriceRule(response?.data);
   }
 };
