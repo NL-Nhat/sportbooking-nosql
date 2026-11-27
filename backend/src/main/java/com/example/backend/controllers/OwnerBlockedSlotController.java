@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -96,5 +97,19 @@ public class OwnerBlockedSlotController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiSuccessResponse.success("Tạo lịch chặn sân thành công", created));
+    }
+
+    @DeleteMapping("/blocked-slots/{id}")
+    @Operation(summary = "Xóa / gỡ khóa một lịch chặn sân của Chủ sân")
+    public ResponseEntity<ApiSuccessResponse<Void>> deleteBlockedSlot(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của lịch chặn sân")
+            @PathVariable("id") String id
+    ) {
+        ownerBlockedSlotService.deleteBlockedSlot(authorizationHeader, id);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Đã gỡ bỏ lịch chặn sân thành công", null)
+        );
     }
 }

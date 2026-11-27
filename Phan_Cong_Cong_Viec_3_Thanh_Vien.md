@@ -147,8 +147,8 @@
   - [x] Làm API tạo lịch chặn sân mới (`POST /api/v1/owner/blocked-slots`):
     - Kiểm tra `courtId`, `startAt < endAt`, `reason` bắt buộc (ví dụ: *"Bảo trì mặt cỏ"*, *"Giải đấu nội bộ"*).
     - Kiểm tra xung đột: không cho phép chặn khoảng giờ đã có khách giữ chỗ hoặc đặt (`booking_slots` đang ở trạng thái `HOLD` hoặc `BOOKED` -> trả về lỗi `409 Conflict`).
-  - [ ] Làm API xóa / mở khóa lịch chặn sân (`DELETE /api/v1/owner/blocked-slots/{id}`).
-  - [ ] Kết nối giao diện Quản lý lịch chặn sân (`/owner/blocked-slots` — `OwnerBlockedSlotsPage.jsx`) với API thật.
+  - [x] Làm API xóa / mở khóa lịch chặn sân (`DELETE /api/v1/owner/blocked-slots/{id}`).
+  - [x] Kết nối giao diện Quản lý lịch chặn sân (`/owner/blocked-slots` — `OwnerBlockedSlotsPage.jsx`) với API thật.
 
 - **Bước 5: Chủ sân Quản lý Đơn đặt sân, Thu 80% tiền còn lại & Đánh dấu Hoàn thành (`bookings`, `payments`)**
   - [ ] Làm API lấy danh sách đơn đặt sân tại các cơ sở của Chủ sân (`GET /api/v1/owner/bookings`): lọc theo `facilityId`, `courtId`, ngày đặt (`bookingDate`), trạng thái thanh toán (`paymentStatus`), tìm kiếm theo `bookingCode`, tên hoặc SĐT khách.

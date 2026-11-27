@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { ownerBlockedSlotService } from '../../services/ownerBlockedSlotService.js';
-import { mockStorage } from '../../../mock/storage/mockStorage.js';
 import { formatDateTime } from '../../utils/formatters.js';
 import { Modal } from '../../components/ui/Modal.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
@@ -21,6 +20,7 @@ export function OwnerBlockedSlotsPage() {
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [deletingSlotId, setDeletingSlotId] = useState('');
 
   // Form
   const [courtId, setCourtId] = useState('');
@@ -105,12 +105,23 @@ export function OwnerBlockedSlotsPage() {
     }
   };
 
-  const handleRemoveBlocked = (id) => {
-    const allBlocked = mockStorage.getCollection('blocked_slots');
-    const filtered = allBlocked.filter((b) => b._id !== id);
-    mockStorage.setCollection('blocked_slots', filtered);
-    showToast('Đã gỡ bỏ lịch chặn sân.', 'info');
-    fetchBlockedSlots(selectedCourtFilter, selectedDateFilter);
+  const handleRemoveBlocked = async (slot) => {
+    const slotId = slot.id || slot._id;
+    const confirmed = window.confirm(
+      `Bạn có chắc chắn muốn gỡ bỏ lịch chặn sân "${slot.reason}" không?`
+    );
+    if (!confirmed) return;
+
+    setDeletingSlotId(slotId);
+    try {
+      await ownerBlockedSlotService.deleteBlockedSlot(slotId);
+      setBlockedSlots((prev) => prev.filter((item) => (item.id || item._id) !== slotId));
+      showToast('Đã gỡ bỏ lịch chặn sân thành công!', 'info');
+    } catch (err) {
+      showToast(err?.message || 'Không thể gỡ bỏ lịch chặn sân.', 'error');
+    } finally {
+      setDeletingSlotId('');
+    }
   };
 
   return (
@@ -257,11 +268,13 @@ export function OwnerBlockedSlotsPage() {
                       <td style={{ color: 'var(--sb-danger)', fontWeight: 600 }}>{b.reason}</td>
                       <td>
                         <button
-                          onClick={() => handleRemoveBlocked(slotId)}
+                          type="button"
+                          onClick={() => handleRemoveBlocked(b)}
                           className="btn btn-secondary btn-sm"
                           style={{ color: 'var(--sb-danger)' }}
+                          disabled={deletingSlotId === slotId}
                         >
-                          <Trash2 size={14} /> Gỡ chặn
+                          <Trash2 size={14} /> {deletingSlotId === slotId ? 'Đang gỡ...' : 'Gỡ chặn'}
                         </button>
                       </td>
                     </tr>
