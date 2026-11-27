@@ -151,8 +151,8 @@
   - [x] Kết nối giao diện Quản lý lịch chặn sân (`/owner/blocked-slots` — `OwnerBlockedSlotsPage.jsx`) với API thật.
 
 - **Bước 5: Chủ sân Quản lý Đơn đặt sân, Thu 80% tiền còn lại & Đánh dấu Hoàn thành (`bookings`, `payments`)**
-  - [ ] Làm API lấy danh sách đơn đặt sân tại các cơ sở của Chủ sân (`GET /api/v1/owner/bookings`): lọc theo `facilityId`, `courtId`, ngày đặt (`bookingDate`), trạng thái thanh toán (`paymentStatus`), tìm kiếm theo `bookingCode`, tên hoặc SĐT khách.
-  - [ ] Hiển thị rõ ràng **danh sách các khung giờ đặt sân** của từng đơn trên bảng Quản lý đặt sân (`/owner/bookings` — `OwnerBookingsPage.jsx`, ví dụ: `12:00 - 13:00, 14:00 - 16:00`).
+  - [x] Làm API lấy danh sách đơn đặt sân tại các cơ sở của Chủ sân (`GET /api/v1/owner/bookings`): lọc theo `facilityId`, `courtId`, ngày đặt (`bookingDate`), trạng thái thanh toán (`paymentStatus`), tìm kiếm theo `bookingCode`, tên hoặc SĐT khách.
+  - [x] Hiển thị rõ ràng **danh sách các khung giờ đặt sân** của từng đơn trên bảng Quản lý đặt sân (`/owner/bookings` — `OwnerBookingsPage.jsx`, ví dụ: `12:00 - 13:00, 14:00 - 16:00`).
   - [ ] Làm API xác nhận đã thu phần tiền 80% còn lại tại sân (`POST /api/v1/owner/bookings/{id}/collect-remaining`): tạo bản ghi `payments` (`type = "REMAINING"`, `method = "CASH"`, `amount = remainingAmount`, `status = "PAID"`), cập nhật `booking.paidAmount = totalAmount`, `remainingAmount = 0`, `paymentStatus = "PAID"`.
   - [ ] Làm API đánh dấu đơn đặt sân đã hoàn thành (`POST /api/v1/owner/bookings/{id}/complete`): chuyển `booking.status = "COMPLETED"`, `completedAt = Instant.now()`.
   - [ ] Làm API Chủ sân hủy đơn đặt sân (`POST /api/v1/owner/bookings/{id}/cancel`): cập nhật `status = "CANCELLED"`, `cancelledBy = "OWNER"`, giải phóng `booking_slots` sang `"RELEASED"`.
