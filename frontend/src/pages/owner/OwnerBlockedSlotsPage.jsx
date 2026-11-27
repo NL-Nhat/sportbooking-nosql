@@ -27,6 +27,7 @@ export function OwnerBlockedSlotsPage() {
   const [startAt, setStartAt] = useState('2026-11-06T08:00');
   const [endAt, setEndAt] = useState('2026-11-06T12:00');
   const [reason, setReason] = useState('Bảo trì mặt sân định kỳ');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -67,31 +68,40 @@ export function OwnerBlockedSlotsPage() {
     }
   }, [user, selectedCourtFilter, selectedDateFilter, fetchBlockedSlots]);
 
-  const handleCreateBlocked = (e) => {
+  const handleCreateBlocked = async (e) => {
     e.preventDefault();
+    if (!courtId) {
+      showToast('Vui lòng chọn sân thể thao cần khóa.', 'warning');
+      return;
+    }
+    if (!startAt || !endAt) {
+      showToast('Vui lòng chọn thời gian bắt đầu và kết thúc.', 'warning');
+      return;
+    }
+    if (new Date(startAt) >= new Date(endAt)) {
+      showToast('Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc.', 'warning');
+      return;
+    }
     if (!reason.trim()) {
       showToast('Vui lòng nhập lý do khóa sân.', 'warning');
       return;
     }
 
+    setSubmitting(true);
     try {
-      const allBlocked = mockStorage.getCollection('blocked_slots');
-      const newBlocked = {
-        _id: `6907000000000000${Date.now().toString(16).slice(-8)}`,
+      await ownerBlockedSlotService.createBlockedSlot({
         courtId,
-        startAt: `${startAt}:00.000Z`,
-        endAt: `${endAt}:00.000Z`,
-        reason,
-        createdBy: user._id,
-        createdAt: new Date().toISOString()
-      };
-      allBlocked.unshift(newBlocked);
-      mockStorage.setCollection('blocked_slots', allBlocked);
+        startAt,
+        endAt,
+        reason: reason.trim()
+      });
       showToast('Đã tạo lịch khóa sân/bảo trì thành công!', 'success');
       setModalOpen(false);
-      fetchBlockedSlots(selectedCourtFilter, selectedDateFilter);
+      await fetchBlockedSlots(selectedCourtFilter, selectedDateFilter);
     } catch (err) {
-      showToast(err.message, 'error');
+      showToast(err?.message || 'Không thể tạo lịch chặn sân.', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -334,11 +344,11 @@ export function OwnerBlockedSlotsPage() {
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px' }}>
-            <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary">
+            <button type="button" onClick={() => setModalOpen(false)} className="btn btn-secondary" disabled={submitting}>
               Đóng
             </button>
-            <button type="submit" className="btn btn-primary">
-              Xác nhận khóa sân
+            <button type="submit" className="btn btn-primary" disabled={submitting}>
+              {submitting ? 'Đang lưu...' : 'Xác nhận khóa sân'}
             </button>
           </div>
         </form>

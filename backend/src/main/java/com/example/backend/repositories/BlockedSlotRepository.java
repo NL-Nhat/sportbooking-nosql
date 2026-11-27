@@ -4,6 +4,7 @@ import com.example.backend.models.BlockedSlot;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -13,4 +14,10 @@ public interface BlockedSlotRepository extends MongoRepository<BlockedSlot, Stri
     List<BlockedSlot> findByCourtIdOrderByStartAtDesc(String courtId);
 
     List<BlockedSlot> findByCourtIdInOrderByStartAtDesc(Collection<String> courtIds);
+
+    List<BlockedSlot> findByCourtIdAndStartAtLessThanAndEndAtGreaterThan(
+            String courtId,
+            Instant endAt,
+            Instant startAt
+    );
 }

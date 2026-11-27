@@ -1,12 +1,16 @@
 package com.example.backend.services;
 
+import com.example.backend.dtos.blockedslot.CreateBlockedSlotRequest;
 import com.example.backend.dtos.blockedslot.OwnerBlockedSlotDto;
+import com.example.backend.dtos.response.ApiErrorResponse.FieldErrorDetail;
 import com.example.backend.exceptions.AppException;
 import com.example.backend.models.BlockedSlot;
+import com.example.backend.models.BookingSlot;
 import com.example.backend.models.Court;
 import com.example.backend.models.Facility;
 import com.example.backend.models.User;
 import com.example.backend.repositories.BlockedSlotRepository;
+import com.example.backend.repositories.BookingSlotRepository;
 import com.example.backend.repositories.CourtRepository;
 import com.example.backend.repositories.FacilityRepository;
 import com.example.backend.repositories.UserRepository;
@@ -17,6 +21,8 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -34,6 +40,7 @@ public class OwnerBlockedSlotService {
     private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private final BlockedSlotRepository blockedSlotRepository;
+    private final BookingSlotRepository bookingSlotRepository;
     private final CourtRepository courtRepository;
     private final FacilityRepository facilityRepository;
     private final UserRepository userRepository;
@@ -120,6 +127,139 @@ public class OwnerBlockedSlotService {
         }
 
         return result;
+    }
+
+    public OwnerBlockedSlotDto createBlockedSlot(
+            String authorizationHeader,
+            String pathCourtId,
+            CreateBlockedSlotRequest request
+    ) {
+        User owner = authenticateOwner(authorizationHeader);
+
+        if (request == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu tạo lịch chặn sân không được để trống");
+        }
+
+        String courtId = pathCourtId != null && !pathCourtId.isBlank()
+                ? pathCourtId.trim()
+                : (request.getCourtId() != null ? request.getCourtId().trim() : "");
+
+        String rawStartAt = request.getStartAt() != null ? request.getStartAt().trim() : "";
+        String rawEndAt = request.getEndAt() != null ? request.getEndAt().trim() : "";
+        String reason = request.getReason() != null ? request.getReason().trim().replaceAll("\\s+", " ") : "";
+
+        List<FieldErrorDetail> errors = new ArrayList<>();
+
+        if (courtId.isEmpty()) {
+            errors.add(new FieldErrorDetail("courtId", "REQUIRED", "Vui lòng chọn sân thể thao cần khóa"));
+        }
+
+        if (reason.isEmpty()) {
+            errors.add(new FieldErrorDetail("reason", "REQUIRED", "Vui lòng nhập lý do khóa sân / bảo trì"));
+        } else if (reason.length() < 2 || reason.length() > 300) {
+            errors.add(new FieldErrorDetail("reason", "INVALID_LENGTH", "Lý do khóa sân phải từ 2 đến 300 ký tự"));
+        }
+
+        Instant startAt = parseInstant(rawStartAt, "startAt", "Thời gian bắt đầu khóa sân", errors);
+        Instant endAt = parseInstant(rawEndAt, "endAt", "Thời gian kết thúc khóa sân", errors);
+
+        if (startAt != null && endAt != null && !startAt.isBefore(endAt)) {
+            errors.add(new FieldErrorDetail("endAt", "INVALID_TIME_RANGE", "Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc"));
+        }
+
+        if (!errors.isEmpty()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu tạo lịch chặn sân không hợp lệ", errors);
+        }
+
+        Court court = findOwnedCourtOrThrow(owner.getId(), courtId);
+        Facility facility = court.getFacilityId() != null
+                ? facilityRepository.findById(court.getFacilityId()).orElse(null)
+                : null;
+
+        // 1. Kiểm tra xung đột với các lịch chặn sân đã tồn tại trên cùng sân
+        List<BlockedSlot> overlappingBlocked = blockedSlotRepository.findByCourtIdAndStartAtLessThanAndEndAtGreaterThan(
+                court.getId(),
+                endAt,
+                startAt
+        );
+        if (!overlappingBlocked.isEmpty()) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "BLOCKED_SLOT_OVERLAP",
+                    "Khoảng thời gian này bị trùng hoặc chồng lấn với một lịch chặn sân đã có của sân '" + court.getName() + "'"
+            );
+        }
+
+        // 2. Kiểm tra xung đột với các ca khách đã đặt (BOOKED) hoặc đang giữ chỗ còn hiệu lực (HOLD)
+        Instant now = Instant.now();
+        List<BookingSlot> overlappingBookingSlots = bookingSlotRepository
+                .findByCourtIdAndStatusInAndStartAtLessThanAndEndAtGreaterThan(
+                        court.getId(),
+                        List.of("HOLD", "BOOKED"),
+                        endAt,
+                        startAt
+                );
+
+        boolean hasActiveBookingConflict = overlappingBookingSlots.stream().anyMatch(slot -> {
+            if ("BOOKED".equalsIgnoreCase(slot.getStatus())) {
+                return true;
+            }
+            if ("HOLD".equalsIgnoreCase(slot.getStatus())) {
+                return slot.getExpiresAt() == null || slot.getExpiresAt().isAfter(now);
+            }
+            return false;
+        });
+
+        if (hasActiveBookingConflict) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "BOOKING_SLOT_CONFLICT",
+                    "Không thể chặn sân trong khoảng giờ này vì đã có khách đặt sân hoặc đang giữ chỗ"
+            );
+        }
+
+        BlockedSlot newSlot = BlockedSlot.builder()
+                .courtId(court.getId())
+                .startAt(startAt)
+                .endAt(endAt)
+                .reason(reason)
+                .createdBy(owner.getId())
+                .createdAt(now)
+                .build();
+
+        BlockedSlot saved = blockedSlotRepository.save(newSlot);
+        return toDto(saved, court, facility);
+    }
+
+    private Instant parseInstant(
+            String rawValue,
+            String fieldName,
+            String fieldLabel,
+            List<FieldErrorDetail> errors
+    ) {
+        if (rawValue == null || rawValue.isEmpty()) {
+            errors.add(new FieldErrorDetail(fieldName, "REQUIRED", fieldLabel + " không được để trống"));
+            return null;
+        }
+        try {
+            return Instant.parse(rawValue);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return OffsetDateTime.parse(rawValue).toInstant();
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            LocalDateTime localDateTime = LocalDateTime.parse(rawValue);
+            return localDateTime.atZone(DEFAULT_ZONE).toInstant();
+        } catch (DateTimeParseException ex) {
+            errors.add(new FieldErrorDetail(
+                    fieldName,
+                    "INVALID_DATETIME_FORMAT",
+                    fieldLabel + " không đúng định dạng ngày giờ ISO-8601"
+            ));
+            return null;
+        }
     }
 
     private Court findOwnedCourtOrThrow(String ownerId, String courtId) {
