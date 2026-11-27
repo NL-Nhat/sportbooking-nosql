@@ -2,6 +2,7 @@ package com.example.backend.controllers;
 
 import com.example.backend.dtos.court.CreateCourtRequest;
 import com.example.backend.dtos.court.OwnerCourtDto;
+import com.example.backend.dtos.court.OwnerOperatingHoursDto;
 import com.example.backend.dtos.court.UpdateCourtRequest;
 import com.example.backend.dtos.court.UpdateCourtStatusRequest;
 import com.example.backend.dtos.response.ApiSuccessResponse;
@@ -96,6 +97,20 @@ public class OwnerCourtController {
         OwnerCourtDto court = ownerCourtService.getOwnerCourtDetail(authorizationHeader, courtId);
         return ResponseEntity.ok(
                 ApiSuccessResponse.success("Lấy chi tiết sân thể thao thành công", court)
+        );
+    }
+
+    @GetMapping("/courts/{courtId}/operating-hours")
+    @Operation(summary = "Xem cấu hình lịch hoạt động hằng ngày (DAILY) của một sân thể thao thuộc Chủ sân")
+    public ResponseEntity<ApiSuccessResponse<OwnerOperatingHoursDto>> getCourtOperatingHours(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của sân thể thao")
+            @PathVariable("courtId") String courtId
+    ) {
+        OwnerOperatingHoursDto operatingHours = ownerCourtService.getCourtOperatingHours(authorizationHeader, courtId);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Lấy cấu hình lịch hoạt động của sân thành công", operatingHours)
         );
     }
 

@@ -47,6 +47,7 @@ export function OwnerOperatingHoursPage() {
   const [effectiveFrom, setEffectiveFrom] = useState('');
   const [effectiveTo, setEffectiveTo] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -59,7 +60,9 @@ export function OwnerOperatingHoursPage() {
     if (user) {
       ownerCourtService.getMyCourts().catch(() => []).then((courtList) => {
         setCourts(courtList);
-        if (courtList.length > 0) setSelectedCourtId(courtList[0]._id);
+        if (courtList.length > 0) {
+          setSelectedCourtId(courtList[0].id || courtList[0]._id);
+        }
         setLoading(false);
       });
     }
@@ -67,12 +70,36 @@ export function OwnerOperatingHoursPage() {
 
   useEffect(() => {
     if (!selectedCourtId) return;
-    const doc = mockStorage.getCollection('operating_hours').find((h) => h.courtId === selectedCourtId) || null;
-    setTemplate(doc);
-    setTimeSlots(doc?.timeSlots ? [...doc.timeSlots].sort((a, b) => a.startTime.localeCompare(b.startTime)) : []);
-    setEffectiveFrom(doc?.effectiveFrom || new Date().toISOString().slice(0, 10));
-    setEffectiveTo(doc?.effectiveTo || '');
+    let isMounted = true;
+    setLoadingSchedule(true);
     setError('');
+
+    ownerCourtService
+      .getCourtOperatingHours(selectedCourtId)
+      .then((doc) => {
+        if (!isMounted) return;
+        setTemplate(doc);
+        setTimeSlots(
+          doc?.timeSlots
+            ? [...doc.timeSlots].sort((a, b) => a.startTime.localeCompare(b.startTime))
+            : []
+        );
+        setEffectiveFrom(doc?.effectiveFrom || new Date().toISOString().slice(0, 10));
+        setEffectiveTo(doc?.effectiveTo || '');
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setError(err?.message || 'Không thể tải cấu hình lịch hoạt động của sân.');
+      })
+      .finally(() => {
+        if (isMounted) {
+          setLoadingSchedule(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [selectedCourtId]);
 
   const updateSlot = (idx, field, value) => {
@@ -163,18 +190,18 @@ export function OwnerOperatingHoursPage() {
           </select>
         </div>
         <div>
-          <label className="form-label">Áp dụng từ ngày (effectiveFrom) *</label>
+          <label className="form-label">Áp dụng từ ngày</label>
           <input type="date" className="form-control" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} />
         </div>
         <div>
-          <label className="form-label">Đến ngày (effectiveTo)</label>
+          <label className="form-label">Đến ngày</label>
           <input type="date" className="form-control" value={effectiveTo} onChange={(e) => setEffectiveTo(e.target.value)} />
-          <small style={{ color: 'var(--sb-text-muted)' }}>Để trống nếu chưa giới hạn.</small>
+          
         </div>
       </div>
 
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: '60px' }}>Đang nạp dữ liệu...</div>
+      {loading || loadingSchedule ? (
+        <div style={{ textAlign: 'center', padding: '60px' }}>Đang nạp cấu hình lịch hoạt động từ máy chủ...</div>
       ) : courts.length === 0 ? (
         <div className="card" style={{ padding: '40px', textAlign: 'center' }}>Bạn chưa có sân nào để cấu hình lịch.</div>
       ) : (

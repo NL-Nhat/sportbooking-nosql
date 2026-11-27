@@ -2,6 +2,7 @@ package com.example.backend.services;
 
 import com.example.backend.dtos.court.CreateCourtRequest;
 import com.example.backend.dtos.court.OwnerCourtDto;
+import com.example.backend.dtos.court.OwnerOperatingHoursDto;
 import com.example.backend.dtos.court.UpdateCourtRequest;
 import com.example.backend.dtos.court.UpdateCourtStatusRequest;
 import com.example.backend.dtos.response.ApiErrorResponse.FieldErrorDetail;
@@ -176,6 +177,42 @@ public class OwnerCourtService {
         User owner = authenticateOwner(authorizationHeader);
         Court court = findOwnedCourtOrThrow(owner.getId(), courtId);
         return buildCourtDetailDto(court);
+    }
+
+    public OwnerOperatingHoursDto getCourtOperatingHours(String authorizationHeader, String courtId) {
+        User owner = authenticateOwner(authorizationHeader);
+        Court court = findOwnedCourtOrThrow(owner.getId(), courtId);
+        Facility facility = court.getFacilityId() != null
+                ? facilityRepository.findById(court.getFacilityId()).orElse(null)
+                : null;
+        OperatingHours operatingHours = operatingHoursRepository.findByCourtId(court.getId()).orElse(null);
+
+        List<TimeSlot> sortedSlots = Collections.emptyList();
+        if (operatingHours != null && operatingHours.getTimeSlots() != null) {
+            sortedSlots = new ArrayList<>(operatingHours.getTimeSlots());
+            sortedSlots.sort(Comparator.comparing(s -> s.getStartTime() != null ? s.getStartTime() : ""));
+        }
+
+        String defaultEffectiveFrom = LocalDate.now(DEFAULT_ZONE).toString();
+
+        return OwnerOperatingHoursDto.builder()
+                .id(operatingHours != null ? operatingHours.getId() : null)
+                .mongoId(operatingHours != null ? operatingHours.getId() : null)
+                .courtId(court.getId())
+                .courtName(court.getName())
+                .facilityId(court.getFacilityId())
+                .facilityName(facility != null ? facility.getName() : null)
+                .repeatMode(operatingHours != null && operatingHours.getRepeatMode() != null
+                        ? operatingHours.getRepeatMode()
+                        : "DAILY")
+                .effectiveFrom(operatingHours != null && operatingHours.getEffectiveFrom() != null
+                        ? operatingHours.getEffectiveFrom()
+                        : defaultEffectiveFrom)
+                .effectiveTo(operatingHours != null ? operatingHours.getEffectiveTo() : null)
+                .timeSlots(sortedSlots)
+                .createdAt(operatingHours != null ? operatingHours.getCreatedAt() : null)
+                .updatedAt(operatingHours != null ? operatingHours.getUpdatedAt() : null)
+                .build();
     }
 
     public OwnerCourtDto createCourt(
