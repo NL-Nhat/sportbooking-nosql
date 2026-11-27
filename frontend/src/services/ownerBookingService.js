@@ -93,5 +93,20 @@ export const ownerBookingService = {
       }
     );
     return normalizeOwnerBooking(response?.data);
+  },
+
+  /**
+   * Chủ sân hủy đơn đặt sân và giải phóng booking_slots sang RELEASED
+   * POST /api/v1/owner/bookings/{id}/cancel
+   */
+  cancelBookingByOwner: async (bookingId, reason = 'Chủ sân hủy đơn đặt sân') => {
+    const response = await apiRequest(
+      `/owner/bookings/${encodeURIComponent(bookingId)}/cancel`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ reason })
+      }
+    );
+    return normalizeOwnerBooking(response?.data);
   }
 };

@@ -119,4 +119,36 @@ public class OwnerBookingController {
                 ApiSuccessResponse.success("Đã đánh dấu hoàn thành đơn đặt sân thành công", updated)
         );
     }
+
+    @PostMapping("/{id}/cancel")
+    @Operation(summary = "Chủ sân hủy đơn đặt sân và giải phóng khung giờ sân (POST)")
+    public ResponseEntity<ApiSuccessResponse<OwnerBookingDto>> cancelBookingPost(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của đơn đặt sân")
+            @PathVariable("id") String id,
+            @RequestBody(required = false) Map<String, String> body
+    ) {
+        String reason = body != null ? body.get("reason") : null;
+        OwnerBookingDto updated = ownerBookingService.cancelBookingByOwner(authorizationHeader, id, reason);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Chủ sân đã hủy đơn đặt sân và giải phóng khung giờ thành công", updated)
+        );
+    }
+
+    @PatchMapping({ "/{id}/cancel", "/{id}/reject" })
+    @Operation(summary = "Chủ sân hủy / từ chối đơn đặt sân và giải phóng khung giờ sân (PATCH)")
+    public ResponseEntity<ApiSuccessResponse<OwnerBookingDto>> cancelBookingPatch(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của đơn đặt sân")
+            @PathVariable("id") String id,
+            @RequestBody(required = false) Map<String, String> body
+    ) {
+        String reason = body != null ? body.get("reason") : null;
+        OwnerBookingDto updated = ownerBookingService.cancelBookingByOwner(authorizationHeader, id, reason);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Chủ sân đã hủy đơn đặt sân và giải phóng khung giờ thành công", updated)
+        );
+    }
 }

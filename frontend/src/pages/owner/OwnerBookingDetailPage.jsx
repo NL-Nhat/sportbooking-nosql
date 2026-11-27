@@ -8,6 +8,7 @@ import { ROUTES } from '../../constants/routes.js';
 import {
   ArrowLeft,
   CheckCircle,
+  XCircle,
   User,
   Clock,
   CreditCard,
@@ -88,6 +89,29 @@ export function OwnerBookingDetailPage() {
       showToast('Đã đánh dấu hoàn thành đơn đặt sân thành công!', 'success');
     } catch (err) {
       showToast(err?.message || 'Không thể đánh dấu hoàn thành đơn đặt sân.', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    if (!booking) return;
+    const reasonInput = window.prompt(
+      `Nhập lý do hủy đơn đặt sân ${booking.bookingCode} (các khung giờ sẽ được giải phóng sang trạng thái trống):`,
+      'Sân cần bảo trì đột xuất'
+    );
+    if (reasonInput === null) return;
+
+    setProcessing(true);
+    try {
+      const updated = await ownerBookingService.cancelBookingByOwner(
+        booking.id || booking._id,
+        reasonInput.trim() || 'Chủ sân hủy đơn đặt sân'
+      );
+      setBooking(updated);
+      showToast('Đã hủy đơn đặt sân và giải phóng khung giờ thành công!', 'info');
+    } catch (err) {
+      showToast(err?.message || 'Không thể hủy đơn đặt sân.', 'error');
     } finally {
       setProcessing(false);
     }
@@ -198,6 +222,19 @@ export function OwnerBookingDetailPage() {
                 disabled={processing}
               >
                 <CheckCircle size={16} /> Đánh dấu hoàn thành buổi tập
+              </button>
+            )}
+
+            {(booking.status === 'PENDING_PAYMENT' ||
+              booking.status === 'PENDING' ||
+              booking.status === 'CONFIRMED') && (
+              <button
+                type="button"
+                onClick={handleCancelBooking}
+                className="btn btn-danger btn-sm"
+                disabled={processing}
+              >
+                <XCircle size={16} /> Hủy đơn đặt sân
               </button>
             )}
           </div>

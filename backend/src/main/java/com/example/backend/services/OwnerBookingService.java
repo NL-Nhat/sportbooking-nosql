@@ -352,6 +352,66 @@ public class OwnerBookingService {
         return getOwnerBookingDetail(authorizationHeader, saved.getId());
     }
 
+    public OwnerBookingDto cancelBookingByOwner(
+            String authorizationHeader,
+            String bookingId,
+            String reason
+    ) {
+        User owner = authenticateOwner(authorizationHeader);
+        Booking booking = findOwnedBookingOrThrow(owner.getId(), bookingId);
+
+        if ("CANCELLED".equalsIgnoreCase(booking.getStatus())) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "BOOKING_ALREADY_CANCELLED",
+                    "Đơn đặt sân này đã bị hủy trước đó"
+            );
+        }
+
+        if ("COMPLETED".equalsIgnoreCase(booking.getStatus()) || "EXPIRED".equalsIgnoreCase(booking.getStatus())) {
+            throw new AppException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "BOOKING_CANNOT_BE_CANCELLED",
+                    "Không thể hủy đơn đặt sân đã hoàn thành hoặc đã hết hạn"
+            );
+        }
+
+        String cancelReason = reason != null && !reason.trim().isEmpty()
+                ? reason.trim().replaceAll("\\s+", " ")
+                : "Chủ sân hủy đơn đặt sân";
+
+        Instant now = Instant.now();
+        booking.setStatus("CANCELLED");
+        booking.setCancelledBy("OWNER");
+        booking.setCancelledAt(now);
+        booking.setCancelReason(cancelReason);
+        booking.setHoldExpiresAt(null);
+
+        PriceDetails priceDetails = booking.getPriceDetails();
+        BigDecimal paidAmount = priceDetails != null && priceDetails.getPaidAmount() != null
+                ? priceDetails.getPaidAmount()
+                : BigDecimal.ZERO;
+
+        if (paidAmount.compareTo(BigDecimal.ZERO) > 0) {
+            booking.setPaymentStatus("REFUNDED");
+        }
+        booking.setUpdatedAt(now);
+        Booking savedBooking = bookingRepository.save(booking);
+
+        // Giải phóng toàn bộ booking_slots của đơn sang RELEASED
+        List<BookingSlot> slots = bookingSlotRepository.findByBookingId(savedBooking.getId());
+        if (!slots.isEmpty()) {
+            for (BookingSlot slot : slots) {
+                slot.setStatus("RELEASED");
+                slot.setExpiresAt(null);
+                slot.setUpdatedAt(now);
+            }
+            bookingSlotRepository.saveAll(slots);
+        }
+
+        return getOwnerBookingDetail(authorizationHeader, savedBooking.getId());
+    }
+
     private Booking findOwnedBookingOrThrow(String ownerId, String bookingId) {
         if (bookingId == null || bookingId.isBlank()) {
             throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_BOOKING_ID", "Mã đơn đặt sân không hợp lệ");
