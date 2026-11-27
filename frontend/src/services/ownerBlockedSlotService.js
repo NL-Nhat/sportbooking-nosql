@@ -64,5 +64,19 @@ export const ownerBlockedSlotService = {
       body: JSON.stringify(payload)
     });
     return normalizeBlockedSlot(response?.data);
+  },
+
+  /**
+   * Xóa / gỡ khóa một lịch chặn sân
+   * DELETE /api/v1/owner/blocked-slots/{id}
+   */
+  deleteBlockedSlot: async (blockedSlotId) => {
+    const response = await apiRequest(
+      `/owner/blocked-slots/${encodeURIComponent(blockedSlotId)}`,
+      {
+        method: 'DELETE'
+      }
+    );
+    return response;
   }
 };

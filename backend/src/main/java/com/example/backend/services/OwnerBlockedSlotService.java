@@ -231,6 +231,28 @@ public class OwnerBlockedSlotService {
         return toDto(saved, court, facility);
     }
 
+    public void deleteBlockedSlot(
+            String authorizationHeader,
+            String blockedSlotId
+    ) {
+        User owner = authenticateOwner(authorizationHeader);
+        if (blockedSlotId == null || blockedSlotId.isBlank()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_BLOCKED_SLOT_ID", "Mã lịch chặn sân không hợp lệ");
+        }
+
+        BlockedSlot slot = blockedSlotRepository.findById(blockedSlotId.trim())
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "BLOCKED_SLOT_NOT_FOUND",
+                        "Không tìm thấy lịch chặn sân"
+                ));
+
+        // Kiểm tra sân của lịch chặn thuộc quyền sở hữu của Chủ sân đang đăng nhập
+        findOwnedCourtOrThrow(owner.getId(), slot.getCourtId());
+
+        blockedSlotRepository.delete(slot);
+    }
+
     private Instant parseInstant(
             String rawValue,
             String fieldName,
