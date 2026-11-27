@@ -16,4 +16,11 @@ public interface BookingSlotRepository extends MongoRepository<BookingSlot, Stri
             Collection<String> statuses,
             Instant now
     );
+
+    List<BookingSlot> findByCourtIdAndStatusInAndStartAtLessThanAndEndAtGreaterThan(
+            String courtId,
+            Collection<String> statuses,
+            Instant endAt,
+            Instant startAt
+    );
 }

@@ -144,7 +144,7 @@
 
 - **Bước 4: Chủ sân Quản lý Lịch chặn sân / Khóa giờ bảo trì (`blocked_slots`)**
   - [x] Làm API lấy danh sách lịch chặn sân (`GET /api/v1/owner/blocked-slots?courtId=...&date=...`).
-  - [ ] Làm API tạo lịch chặn sân mới (`POST /api/v1/owner/blocked-slots`):
+  - [x] Làm API tạo lịch chặn sân mới (`POST /api/v1/owner/blocked-slots`):
     - Kiểm tra `courtId`, `startAt < endAt`, `reason` bắt buộc (ví dụ: *"Bảo trì mặt cỏ"*, *"Giải đấu nội bộ"*).
     - Kiểm tra xung đột: không cho phép chặn khoảng giờ đã có khách giữ chỗ hoặc đặt (`booking_slots` đang ở trạng thái `HOLD` hoặc `BOOKED` -> trả về lỗi `409 Conflict`).
   - [ ] Làm API xóa / mở khóa lịch chặn sân (`DELETE /api/v1/owner/blocked-slots/{id}`).
