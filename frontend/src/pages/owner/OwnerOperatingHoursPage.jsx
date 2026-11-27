@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { ownerCourtService } from '../../services/ownerCourtService.js';
-import { mockStorage } from '../../../mock/storage/mockStorage.js';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import { Clock, Save, Plus, Trash2, Wand2, Info } from 'lucide-react';
 
@@ -131,7 +130,7 @@ export function OwnerOperatingHoursPage() {
     showToast(`Đã sinh ${generated.length} khung giờ ${dur} phút. Nhấn "Lưu mẫu lịch" để áp dụng.`, 'info');
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const msg = validateSlots(timeSlots, effectiveFrom, effectiveTo);
     if (msg) {
       setError(msg);
@@ -141,26 +140,26 @@ export function OwnerOperatingHoursPage() {
     setError('');
     setSaving(true);
     try {
-      const now = new Date().toISOString();
       const sorted = [...timeSlots].sort((a, b) => a.startTime.localeCompare(b.startTime));
-      const all = mockStorage.getCollection('operating_hours');
-      const others = all.filter((h) => h.courtId !== selectedCourtId);
-      const doc = {
-        _id: template?._id || `6905${Date.now().toString(16).padStart(20, '0')}`.slice(0, 24),
-        courtId: selectedCourtId,
+      const updatedDoc = await ownerCourtService.updateCourtOperatingHours(selectedCourtId, {
         repeatMode: 'DAILY',
         effectiveFrom,
         effectiveTo: effectiveTo || null,
-        timeSlots: sorted,
-        createdAt: template?.createdAt || now,
-        updatedAt: now
-      };
-      mockStorage.setCollection('operating_hours', [...others, doc]);
-      setTemplate(doc);
-      setTimeSlots(sorted);
+        timeSlots: sorted
+      });
+      setTemplate(updatedDoc);
+      setTimeSlots(
+        Array.isArray(updatedDoc?.timeSlots) && updatedDoc.timeSlots.length > 0
+          ? [...updatedDoc.timeSlots].sort((a, b) => a.startTime.localeCompare(b.startTime))
+          : sorted
+      );
+      setEffectiveFrom(updatedDoc?.effectiveFrom || effectiveFrom);
+      setEffectiveTo(updatedDoc?.effectiveTo || '');
       showToast('Đã lưu mẫu lịch hằng ngày. Các booking đã xác nhận không bị ảnh hưởng.', 'success');
     } catch (err) {
-      showToast(err.message, 'error');
+      const errMsg = err?.message || 'Không thể lưu cấu hình lịch hoạt động.';
+      setError(errMsg);
+      showToast(errMsg, 'error');
     } finally {
       setSaving(false);
     }
@@ -184,9 +183,14 @@ export function OwnerOperatingHoursPage() {
         <div>
           <label className="form-label">Chọn sân cần cấu hình</label>
           <select className="form-control" value={selectedCourtId} onChange={(e) => setSelectedCourtId(e.target.value)}>
-            {courts.map((c) => (
-              <option key={c._id} value={c._id}>{c.name}</option>
-            ))}
+            {courts.map((c) => {
+              const cId = c.id || c._id;
+              return (
+                <option key={cId} value={cId}>
+                  {c.name} {c.facilityName ? `(${c.facilityName})` : ''}
+                </option>
+              );
+            })}
           </select>
         </div>
         <div>

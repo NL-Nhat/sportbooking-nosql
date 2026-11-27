@@ -5,6 +5,7 @@ import com.example.backend.dtos.court.OwnerCourtDto;
 import com.example.backend.dtos.court.OwnerOperatingHoursDto;
 import com.example.backend.dtos.court.UpdateCourtRequest;
 import com.example.backend.dtos.court.UpdateCourtStatusRequest;
+import com.example.backend.dtos.court.UpdateOperatingHoursRequest;
 import com.example.backend.dtos.response.ApiErrorResponse.FieldErrorDetail;
 import com.example.backend.exceptions.AppException;
 import com.example.backend.models.BookingSlot;
@@ -187,6 +188,98 @@ public class OwnerCourtService {
                 : null;
         OperatingHours operatingHours = operatingHoursRepository.findByCourtId(court.getId()).orElse(null);
 
+        return toOperatingHoursDto(court, facility, operatingHours);
+    }
+
+    public OwnerOperatingHoursDto updateCourtOperatingHours(
+            String authorizationHeader,
+            String courtId,
+            UpdateOperatingHoursRequest request
+    ) {
+        User owner = authenticateOwner(authorizationHeader);
+        Court court = findOwnedCourtOrThrow(owner.getId(), courtId);
+
+        if (request == null) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "VALIDATION_ERROR",
+                    "Dữ liệu cấu hình lịch hoạt động không được để trống"
+            );
+        }
+
+        List<FieldErrorDetail> errors = new ArrayList<>();
+
+        String repeatMode = request.getRepeatMode() != null && !request.getRepeatMode().trim().isEmpty()
+                ? request.getRepeatMode().trim().toUpperCase(Locale.ROOT)
+                : "DAILY";
+        if (!"DAILY".equals(repeatMode)) {
+            errors.add(new FieldErrorDetail("repeatMode", "INVALID_VALUE", "Chế độ lặp lịch hoạt động hiện tại phải là DAILY"));
+        }
+
+        String effectiveFrom = request.getEffectiveFrom() != null
+                ? request.getEffectiveFrom().trim()
+                : "";
+        if (effectiveFrom.isEmpty()) {
+            errors.add(new FieldErrorDetail("effectiveFrom", "REQUIRED", "Vui lòng chọn ngày bắt đầu áp dụng (effectiveFrom)"));
+        } else if (!DATE_YYYY_MM_DD_PATTERN.matcher(effectiveFrom).matches()) {
+            errors.add(new FieldErrorDetail("effectiveFrom", "INVALID_FORMAT", "Ngày bắt đầu áp dụng (effectiveFrom) phải có định dạng yyyy-MM-dd"));
+        }
+
+        String effectiveTo = request.getEffectiveTo() != null && !request.getEffectiveTo().trim().isEmpty()
+                ? request.getEffectiveTo().trim()
+                : null;
+        if (effectiveTo != null) {
+            if (!DATE_YYYY_MM_DD_PATTERN.matcher(effectiveTo).matches()) {
+                errors.add(new FieldErrorDetail("effectiveTo", "INVALID_FORMAT", "Ngày kết thúc (effectiveTo) phải có định dạng yyyy-MM-dd"));
+            } else if (!effectiveFrom.isEmpty() && effectiveTo.compareTo(effectiveFrom) < 0) {
+                errors.add(new FieldErrorDetail("effectiveTo", "INVALID_RANGE", "Ngày kết thúc (effectiveTo) phải lớn hơn hoặc bằng ngày bắt đầu (effectiveFrom)"));
+            }
+        }
+
+        List<TimeSlot> validatedSlots = validateAndSortTimeSlots(request.getTimeSlots(), errors);
+
+        if (!errors.isEmpty()) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "VALIDATION_ERROR",
+                    "Dữ liệu cấu hình lịch hoạt động không hợp lệ",
+                    errors
+            );
+        }
+
+        Instant now = Instant.now();
+        OperatingHours operatingHours = operatingHoursRepository.findByCourtId(court.getId()).orElse(null);
+        if (operatingHours != null) {
+            operatingHours.setRepeatMode("DAILY");
+            operatingHours.setEffectiveFrom(effectiveFrom);
+            operatingHours.setEffectiveTo(effectiveTo);
+            operatingHours.setTimeSlots(validatedSlots);
+            operatingHours.setUpdatedAt(now);
+        } else {
+            operatingHours = OperatingHours.builder()
+                    .courtId(court.getId())
+                    .repeatMode("DAILY")
+                    .effectiveFrom(effectiveFrom)
+                    .effectiveTo(effectiveTo)
+                    .timeSlots(validatedSlots)
+                    .createdAt(now)
+                    .updatedAt(now)
+                    .build();
+        }
+
+        OperatingHours saved = operatingHoursRepository.save(operatingHours);
+        Facility facility = court.getFacilityId() != null
+                ? facilityRepository.findById(court.getFacilityId()).orElse(null)
+                : null;
+
+        return toOperatingHoursDto(court, facility, saved);
+    }
+
+    private OwnerOperatingHoursDto toOperatingHoursDto(
+            Court court,
+            Facility facility,
+            OperatingHours operatingHours
+    ) {
         List<TimeSlot> sortedSlots = Collections.emptyList();
         if (operatingHours != null && operatingHours.getTimeSlots() != null) {
             sortedSlots = new ArrayList<>(operatingHours.getTimeSlots());

@@ -139,8 +139,8 @@
 
 - **Bước 3: Chủ sân Quản lý chuyên sâu Lịch hoạt động theo từng Sân (`operating_hours`)**
   - [x] Làm API xem cấu hình lịch hoạt động của một sân (`GET /api/v1/owner/courts/{courtId}/operating-hours`).
-  - [ ] Làm API cập nhật lịch hoạt động của sân (`PUT /api/v1/owner/courts/{courtId}/operating-hours`): cập nhật `effectiveFrom`, `effectiveTo`, `status` và danh sách các khung giờ `timeSlots` (kiểm tra các khung giờ không giao nhau).
-  - [ ] Kết nối giao diện Lịch hoạt động (`/owner/operating-hours` — `OwnerOperatingHoursPage.jsx`) với API thật.
+  - [x] Làm API cập nhật lịch hoạt động của sân (`PUT /api/v1/owner/courts/{courtId}/operating-hours`): cập nhật `effectiveFrom`, `effectiveTo`, `status` và danh sách các khung giờ `timeSlots` (kiểm tra các khung giờ không giao nhau).
+  - [x] Kết nối giao diện Lịch hoạt động (`/owner/operating-hours` — `OwnerOperatingHoursPage.jsx`) với API thật.
 
 - **Bước 4: Chủ sân Quản lý Quy tắc Giá động (`price_rules`)**
   - [ ] Làm API lấy danh sách quy tắc giá theo sân (`GET /api/v1/owner/price-rules?courtId=...`): sắp xếp theo độ ưu tiên `priority` giảm dần, lọc theo trạng thái (`ACTIVE`, `INACTIVE`).
