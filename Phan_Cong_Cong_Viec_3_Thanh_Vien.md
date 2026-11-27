@@ -138,7 +138,7 @@
   - [x] Kết nối giao diện Danh sách sân (`/owner/courts` — `OwnerCourtsPage.jsx`) và Form Thêm/Sửa sân (`/owner/courts/new`, `/owner/courts/:id/edit` — `OwnerCourtFormPage.jsx`) với API thật.
 
 - **Bước 3: Chủ sân Quản lý chuyên sâu Lịch hoạt động theo từng Sân (`operating_hours`)**
-  - [ ] Làm API xem cấu hình lịch hoạt động của một sân (`GET /api/v1/owner/courts/{courtId}/operating-hours`).
+  - [x] Làm API xem cấu hình lịch hoạt động của một sân (`GET /api/v1/owner/courts/{courtId}/operating-hours`).
   - [ ] Làm API cập nhật lịch hoạt động của sân (`PUT /api/v1/owner/courts/{courtId}/operating-hours`): cập nhật `effectiveFrom`, `effectiveTo`, `status` và danh sách các khung giờ `timeSlots` (kiểm tra các khung giờ không giao nhau).
   - [ ] Kết nối giao diện Lịch hoạt động (`/owner/operating-hours` — `OwnerOperatingHoursPage.jsx`) với API thật.
 

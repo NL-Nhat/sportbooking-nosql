@@ -107,6 +107,29 @@ export const ownerCourtService = {
   },
 
   /**
+   * Xem cấu hình lịch hoạt động hằng ngày (DAILY) của một sân thuộc Chủ sân
+   * GET /api/v1/owner/courts/{courtId}/operating-hours
+   */
+  getCourtOperatingHours: async (courtId) => {
+    const response = await apiRequest(
+      `/owner/courts/${encodeURIComponent(courtId)}/operating-hours`,
+      {
+        method: 'GET'
+      }
+    );
+    const data = response?.data || null;
+    if (!data) return null;
+    const resolvedId = data.id || data._id || null;
+    return {
+      ...data,
+      id: resolvedId,
+      _id: resolvedId,
+      repeatMode: data.repeatMode || 'DAILY',
+      timeSlots: Array.isArray(data.timeSlots) ? data.timeSlots : []
+    };
+  },
+
+  /**
    * Tạo sân thể thao mới kèm cấu hình khung giờ cho thuê hằng ngày (DAILY)
    * POST /api/v1/owner/facilities/{facilityId}/courts
    */
