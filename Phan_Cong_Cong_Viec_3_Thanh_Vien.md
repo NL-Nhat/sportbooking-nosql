@@ -143,7 +143,7 @@
   - [x] Kết nối giao diện Lịch hoạt động (`/owner/operating-hours` — `OwnerOperatingHoursPage.jsx`) với API thật.
 
 - **Bước 4: Chủ sân Quản lý Quy tắc Giá động (`price_rules`)**
-  - [ ] Làm API lấy danh sách quy tắc giá theo sân (`GET /api/v1/owner/price-rules?courtId=...`): sắp xếp theo độ ưu tiên `priority` giảm dần, lọc theo trạng thái (`ACTIVE`, `INACTIVE`).
+  - [x] Làm API lấy danh sách quy tắc giá theo sân (`GET /api/v1/owner/price-rules?courtId=...`): sắp xếp theo độ ưu tiên `priority` giảm dần, lọc theo trạng thái (`ACTIVE`, `INACTIVE`).
   - [ ] Làm API tạo quy tắc giá mới (`POST /api/v1/owner/price-rules`): lưu `courtId`, `name`, `startTime`, `endTime` (`startTime < endTime`), `pricePerSlot` (`BigDecimal` > 0), `daysOfWeek` (`1..7`), `specificDates` (`yyyy-MM-dd`), `validFrom`, `validTo`, `priority`.
   - [ ] Làm API cập nhật quy tắc giá (`PATCH /api/v1/owner/price-rules/{id}`), bật/tắt trạng thái và xóa quy tắc giá (`DELETE /api/v1/owner/price-rules/{id}`).
   - [ ] Kết nối giao diện Danh sách quy tắc giá (`/owner/pricing` — `OwnerPricingPage.jsx`) và Form Tạo quy tắc giá (`/owner/pricing/new` — `OwnerPriceRuleFormPage.jsx`) với API thật.
