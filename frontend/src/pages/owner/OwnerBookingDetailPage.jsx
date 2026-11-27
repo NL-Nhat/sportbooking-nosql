@@ -7,6 +7,7 @@ import { useToast } from '../../contexts/ToastContext.jsx';
 import { ROUTES } from '../../constants/routes.js';
 import {
   ArrowLeft,
+  CheckCircle,
   User,
   Clock,
   CreditCard,
@@ -68,6 +69,25 @@ export function OwnerBookingDetailPage() {
       showToast('Đã xác nhận thu đủ phần tiền 80% còn lại tại sân thành công!', 'success');
     } catch (err) {
       showToast(err?.message || 'Không thể xác nhận thu tiền còn lại.', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleCompleteBooking = async () => {
+    if (!booking) return;
+    const confirmed = window.confirm(
+      `Xác nhận đánh dấu đơn đặt sân ${booking.bookingCode} đã hoàn thành buổi tập?`
+    );
+    if (!confirmed) return;
+
+    setProcessing(true);
+    try {
+      const updated = await ownerBookingService.completeBooking(booking.id || booking._id);
+      setBooking(updated);
+      showToast('Đã đánh dấu hoàn thành đơn đặt sân thành công!', 'success');
+    } catch (err) {
+      showToast(err?.message || 'Không thể đánh dấu hoàn thành đơn đặt sân.', 'error');
     } finally {
       setProcessing(false);
     }
@@ -169,6 +189,17 @@ export function OwnerBookingDetailPage() {
                   <CreditCard size={16} /> Thu {formatCurrency(booking.priceDetails?.remainingAmount ?? 0)} còn lại tại sân
                 </button>
               )}
+
+            {booking.status === 'CONFIRMED' && (
+              <button
+                type="button"
+                onClick={handleCompleteBooking}
+                className="btn btn-primary btn-sm"
+                disabled={processing}
+              >
+                <CheckCircle size={16} /> Đánh dấu hoàn thành buổi tập
+              </button>
+            )}
           </div>
         </div>
 

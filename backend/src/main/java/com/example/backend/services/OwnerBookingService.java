@@ -320,6 +320,38 @@ public class OwnerBookingService {
         return getOwnerBookingDetail(authorizationHeader, savedBooking.getId());
     }
 
+    public OwnerBookingDto completeBooking(
+            String authorizationHeader,
+            String bookingId
+    ) {
+        User owner = authenticateOwner(authorizationHeader);
+        Booking booking = findOwnedBookingOrThrow(owner.getId(), bookingId);
+
+        if ("COMPLETED".equalsIgnoreCase(booking.getStatus())) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "BOOKING_ALREADY_COMPLETED",
+                    "Đơn đặt sân này đã được đánh dấu hoàn thành trước đó"
+            );
+        }
+
+        if ("CANCELLED".equalsIgnoreCase(booking.getStatus()) || "EXPIRED".equalsIgnoreCase(booking.getStatus())) {
+            throw new AppException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "BOOKING_NOT_ACTIVE",
+                    "Không thể đánh dấu hoàn thành cho đơn đặt sân đã hủy hoặc đã hết hạn"
+            );
+        }
+
+        Instant now = Instant.now();
+        booking.setStatus("COMPLETED");
+        booking.setCompletedAt(now);
+        booking.setUpdatedAt(now);
+
+        Booking saved = bookingRepository.save(booking);
+        return getOwnerBookingDetail(authorizationHeader, saved.getId());
+    }
+
     private Booking findOwnedBookingOrThrow(String ownerId, String bookingId) {
         if (bookingId == null || bookingId.isBlank()) {
             throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_BOOKING_ID", "Mã đơn đặt sân không hợp lệ");
@@ -455,6 +487,8 @@ public class OwnerBookingService {
                 .cancellationDeadline(booking.getCancellationDeadline())
                 .cancelledAt(booking.getCancelledAt())
                 .cancelReason(booking.getCancelReason())
+                .cancelledBy(booking.getCancelledBy())
+                .completedAt(booking.getCompletedAt())
                 .note(booking.getNote())
                 .payments(payments != null ? payments : Collections.emptyList())
                 .createdAt(booking.getCreatedAt())

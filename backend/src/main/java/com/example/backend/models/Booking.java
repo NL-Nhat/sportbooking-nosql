@@ -71,6 +71,10 @@ public class Booking {
 
     private String cancelReason;
 
+    private String cancelledBy;
+
+    private Instant completedAt;
+
     private String note;
 
     @CreatedDate

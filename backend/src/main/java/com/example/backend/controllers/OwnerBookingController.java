@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -88,6 +89,34 @@ public class OwnerBookingController {
         OwnerBookingDto updated = ownerBookingService.collectRemainingPayment(authorizationHeader, id, method);
         return ResponseEntity.ok(
                 ApiSuccessResponse.success("Xác nhận thu đủ phần tiền còn lại tại sân thành công", updated)
+        );
+    }
+
+    @PostMapping("/{id}/complete")
+    @Operation(summary = "Đánh dấu đơn đặt sân đã hoàn thành (POST)")
+    public ResponseEntity<ApiSuccessResponse<OwnerBookingDto>> completeBookingPost(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của đơn đặt sân")
+            @PathVariable("id") String id
+    ) {
+        OwnerBookingDto updated = ownerBookingService.completeBooking(authorizationHeader, id);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Đã đánh dấu hoàn thành đơn đặt sân thành công", updated)
+        );
+    }
+
+    @PatchMapping("/{id}/complete")
+    @Operation(summary = "Đánh dấu đơn đặt sân đã hoàn thành (PATCH)")
+    public ResponseEntity<ApiSuccessResponse<OwnerBookingDto>> completeBookingPatch(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của đơn đặt sân")
+            @PathVariable("id") String id
+    ) {
+        OwnerBookingDto updated = ownerBookingService.completeBooking(authorizationHeader, id);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Đã đánh dấu hoàn thành đơn đặt sân thành công", updated)
         );
     }
 }

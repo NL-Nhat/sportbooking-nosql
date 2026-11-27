@@ -79,5 +79,19 @@ export const ownerBookingService = {
       }
     );
     return normalizeOwnerBooking(response?.data);
+  },
+
+  /**
+   * Đánh dấu đơn đặt sân đã hoàn thành
+   * POST /api/v1/owner/bookings/{id}/complete
+   */
+  completeBooking: async (bookingId) => {
+    const response = await apiRequest(
+      `/owner/bookings/${encodeURIComponent(bookingId)}/complete`,
+      {
+        method: 'POST'
+      }
+    );
+    return normalizeOwnerBooking(response?.data);
   }
 };

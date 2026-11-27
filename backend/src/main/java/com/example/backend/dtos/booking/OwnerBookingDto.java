@@ -61,6 +61,10 @@ public class OwnerBookingDto {
 
     private String cancelReason;
 
+    private String cancelledBy;
+
+    private Instant completedAt;
+
     private String note;
 
     private List<Payment> payments;
