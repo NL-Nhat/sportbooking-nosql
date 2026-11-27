@@ -3,12 +3,15 @@ package com.example.backend.services;
 import com.example.backend.dtos.booking.OwnerBookingDto;
 import com.example.backend.exceptions.AppException;
 import com.example.backend.models.Booking;
+import com.example.backend.models.BookingSlot;
 import com.example.backend.models.Court;
 import com.example.backend.models.Facility;
 import com.example.backend.models.Payment;
 import com.example.backend.models.User;
 import com.example.backend.models.embedded.BookingItem;
+import com.example.backend.models.embedded.PriceDetails;
 import com.example.backend.repositories.BookingRepository;
+import com.example.backend.repositories.BookingSlotRepository;
 import com.example.backend.repositories.CourtRepository;
 import com.example.backend.repositories.FacilityRepository;
 import com.example.backend.repositories.PaymentRepository;
@@ -18,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -28,6 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +44,7 @@ public class OwnerBookingService {
     private static final DateTimeFormatter HH_MM_FORMATTER = DateTimeFormatter.ofPattern("HH:mm").withZone(DEFAULT_ZONE);
 
     private final BookingRepository bookingRepository;
+    private final BookingSlotRepository bookingSlotRepository;
     private final PaymentRepository paymentRepository;
     private final CourtRepository courtRepository;
     private final FacilityRepository facilityRepository;
@@ -203,6 +210,114 @@ public class OwnerBookingService {
         List<Payment> payments = paymentRepository.findByBookingIdOrderByCreatedAtDesc(booking.getId());
 
         return toDto(booking, customer, facility, court, payments);
+    }
+
+    public OwnerBookingDto collectRemainingPayment(
+            String authorizationHeader,
+            String bookingId,
+            String paymentMethod
+    ) {
+        User owner = authenticateOwner(authorizationHeader);
+        Booking booking = findOwnedBookingOrThrow(owner.getId(), bookingId);
+
+        if ("CANCELLED".equalsIgnoreCase(booking.getStatus()) || "EXPIRED".equalsIgnoreCase(booking.getStatus())) {
+            throw new AppException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "BOOKING_NOT_ACTIVE",
+                    "Không thể thu tiền còn lại cho đơn đặt sân đã hủy hoặc đã hết hạn"
+            );
+        }
+
+        if ("PAID".equalsIgnoreCase(booking.getPaymentStatus())) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "BOOKING_ALREADY_PAID",
+                    "Đơn đặt sân này đã được thanh toán đủ 100%"
+            );
+        }
+
+        PriceDetails priceDetails = booking.getPriceDetails();
+        if (priceDetails == null) {
+            throw new AppException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "MISSING_PRICE_DETAILS",
+                    "Đơn đặt sân không có thông tin chi tiết giá"
+            );
+        }
+
+        BigDecimal totalAmount = priceDetails.getOriginalAmount() != null
+                ? priceDetails.getOriginalAmount()
+                : BigDecimal.ZERO;
+        BigDecimal paidAmount = priceDetails.getPaidAmount() != null
+                ? priceDetails.getPaidAmount()
+                : BigDecimal.ZERO;
+        BigDecimal remainingAmount = priceDetails.getRemainingAmount() != null
+                ? priceDetails.getRemainingAmount()
+                : totalAmount.subtract(paidAmount);
+
+        if (remainingAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new AppException(
+                    HttpStatus.CONFLICT,
+                    "NO_REMAINING_AMOUNT",
+                    "Đơn đặt sân không còn khoản tiền nào cần thu thêm"
+            );
+        }
+
+        String normalizedMethod = paymentMethod != null && !paymentMethod.trim().isEmpty()
+                ? paymentMethod.trim().toUpperCase(Locale.ROOT)
+                : "CASH";
+        if (!Set.of("CASH", "BANK_TRANSFER", "ONLINE").contains(normalizedMethod)) {
+            normalizedMethod = "CASH";
+        }
+
+        Instant now = Instant.now();
+        String txnSuffix = UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase(Locale.ROOT);
+        Payment remainingPayment = Payment.builder()
+                .bookingId(booking.getId())
+                .customerId(booking.getCustomerId())
+                .paymentType("REMAINING")
+                .amount(remainingAmount)
+                .currency(priceDetails.getCurrency() != null ? priceDetails.getCurrency() : "VND")
+                .method(normalizedMethod)
+                .provider("AT_VENUE")
+                .transactionCode("CASH-" + txnSuffix)
+                .providerEventId("venue_" + now.toEpochMilli())
+                .status("PAID")
+                .paidAt(now)
+                .createdAt(now)
+                .updatedAt(now)
+                .build();
+
+        paymentRepository.save(remainingPayment);
+
+        priceDetails.setPaidAmount(totalAmount);
+        priceDetails.setRemainingAmount(BigDecimal.ZERO);
+        booking.setPriceDetails(priceDetails);
+        booking.setPaymentStatus("PAID");
+        if ("PENDING_PAYMENT".equalsIgnoreCase(booking.getStatus())) {
+            booking.setStatus("CONFIRMED");
+            booking.setHoldExpiresAt(null);
+        }
+        booking.setUpdatedAt(now);
+
+        Booking savedBooking = bookingRepository.save(booking);
+
+        // Chuyển các booking_slots đang HOLD sang BOOKED nếu cần
+        List<BookingSlot> slots = bookingSlotRepository.findByBookingId(savedBooking.getId());
+        List<BookingSlot> slotsToUpdate = new ArrayList<>();
+        for (BookingSlot slot : slots) {
+            if ("HOLD".equalsIgnoreCase(slot.getStatus())) {
+                slot.setStatus("BOOKED");
+                slot.setExpiresAt(null);
+                slot.setUpdatedAt(now);
+                slotsToUpdate.add(slot);
+            }
+        }
+        if (!slotsToUpdate.isEmpty()) {
+            bookingSlotRepository.saveAll(slotsToUpdate);
+        }
+
+        return getOwnerBookingDetail(authorizationHeader, savedBooking.getId());
     }
 
     private Booking findOwnedBookingOrThrow(String ownerId, String bookingId) {

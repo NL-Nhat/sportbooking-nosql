@@ -11,12 +11,15 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/owner/bookings")
@@ -69,6 +72,22 @@ public class OwnerBookingController {
         OwnerBookingDto booking = ownerBookingService.getOwnerBookingDetail(authorizationHeader, id);
         return ResponseEntity.ok(
                 ApiSuccessResponse.success("Lấy thông tin chi tiết đơn đặt sân thành công", booking)
+        );
+    }
+
+    @PostMapping("/{id}/collect-remaining")
+    @Operation(summary = "Xác nhận đã thu phần tiền 80% còn lại tại sân cho đơn đặt sân")
+    public ResponseEntity<ApiSuccessResponse<OwnerBookingDto>> collectRemainingPayment(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của đơn đặt sân")
+            @PathVariable("id") String id,
+            @RequestBody(required = false) Map<String, String> body
+    ) {
+        String method = body != null ? body.get("method") : "CASH";
+        OwnerBookingDto updated = ownerBookingService.collectRemainingPayment(authorizationHeader, id, method);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Xác nhận thu đủ phần tiền còn lại tại sân thành công", updated)
         );
     }
 }

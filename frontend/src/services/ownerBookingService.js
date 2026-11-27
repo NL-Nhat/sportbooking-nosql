@@ -64,5 +64,20 @@ export const ownerBookingService = {
       method: 'GET'
     });
     return normalizeOwnerBooking(response?.data);
+  },
+
+  /**
+   * Xác nhận đã thu phần tiền 80% còn lại tại sân
+   * POST /api/v1/owner/bookings/{id}/collect-remaining
+   */
+  collectRemainingPayment: async (bookingId, method = 'CASH') => {
+    const response = await apiRequest(
+      `/owner/bookings/${encodeURIComponent(bookingId)}/collect-remaining`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ method })
+      }
+    );
+    return normalizeOwnerBooking(response?.data);
   }
 };

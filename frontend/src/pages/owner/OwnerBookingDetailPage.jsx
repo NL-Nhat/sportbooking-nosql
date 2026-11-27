@@ -3,11 +3,13 @@ import { useParams, Link } from 'react-router-dom';
 import { ownerBookingService } from '../../services/ownerBookingService.js';
 import { formatCurrency, formatDate, formatDateTime } from '../../utils/formatters.js';
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
+import { useToast } from '../../contexts/ToastContext.jsx';
 import { ROUTES } from '../../constants/routes.js';
 import {
   ArrowLeft,
   User,
   Clock,
+  CreditCard,
   AlertCircle,
   RefreshCw
 } from 'lucide-react';
@@ -26,10 +28,12 @@ const formatSlotRangeFromItem = (item) => {
 
 export function OwnerBookingDetailPage() {
   const { id } = useParams();
+  const { showToast } = useToast();
 
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [processing, setProcessing] = useState(false);
 
   const fetchBookingDetail = useCallback(async () => {
     if (!id) return;
@@ -48,6 +52,26 @@ export function OwnerBookingDetailPage() {
   useEffect(() => {
     fetchBookingDetail();
   }, [fetchBookingDetail]);
+
+  const handleCollectRemaining = async () => {
+    if (!booking) return;
+    const remaining = Number(booking.priceDetails?.remainingAmount ?? 0);
+    const confirmed = window.confirm(
+      `Xác nhận đã thu đủ số tiền còn lại ${formatCurrency(remaining)} tại sân cho đơn ${booking.bookingCode}?`
+    );
+    if (!confirmed) return;
+
+    setProcessing(true);
+    try {
+      const updated = await ownerBookingService.collectRemainingPayment(booking.id || booking._id, 'CASH');
+      setBooking(updated);
+      showToast('Đã xác nhận thu đủ phần tiền 80% còn lại tại sân thành công!', 'success');
+    } catch (err) {
+      showToast(err?.message || 'Không thể xác nhận thu tiền còn lại.', 'error');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   if (loading) {
     return <div style={{ textAlign: 'center', padding: '60px' }}>Đang nạp chi tiết đơn đặt sân từ máy chủ...</div>;
@@ -129,6 +153,22 @@ export function OwnerBookingDetailPage() {
             <div style={{ fontSize: '0.85rem', color: 'var(--sb-text-muted)' }}>
               Tạo lúc: {formatDateTime(booking.createdAt)}
             </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            {booking.status !== 'CANCELLED' &&
+              booking.status !== 'EXPIRED' &&
+              booking.paymentStatus !== 'PAID' &&
+              Number(booking.priceDetails?.remainingAmount ?? 0) > 0 && (
+                <button
+                  type="button"
+                  onClick={handleCollectRemaining}
+                  className="btn btn-primary btn-sm"
+                  disabled={processing}
+                >
+                  <CreditCard size={16} /> Thu {formatCurrency(booking.priceDetails?.remainingAmount ?? 0)} còn lại tại sân
+                </button>
+              )}
           </div>
         </div>
 
