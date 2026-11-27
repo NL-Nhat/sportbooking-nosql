@@ -159,8 +159,8 @@
   - [x] Kết nối 2 trang `/owner/bookings` (`OwnerBookingsPage.jsx`) và `/owner/bookings/:id` (`OwnerBookingDetailPage.jsx`) với API thật.
 
 - **Bước 6: Chủ sân Xem Lịch biểu Đặt sân Trực quan (`bookings`, `booking_slots`, `blocked_slots`)**
-  - [ ] Làm API lấy dữ liệu lịch biểu trực quan theo cơ sở và ngày (`GET /api/v1/owner/calendar?facilityId=...&date=yyyy-MM-dd`): trả về toàn bộ các sân thuộc cơ sở cùng danh sách khung giờ Trống (`AVAILABLE`), Đang giữ chỗ (`HOLD`), Đã đặt (`BOOKED` kèm tên khách, SĐT, mã đơn) và Đang bảo trì (`BLOCKED`).
-  - [ ] Kết nối giao diện Lịch biểu trực quan (`/owner/calendar` — `OwnerCalendarPage.jsx`) với API thật.
+  - [x] Làm API lấy dữ liệu lịch biểu trực quan theo cơ sở và ngày (`GET /api/v1/owner/calendar?facilityId=...&date=yyyy-MM-dd`): trả về toàn bộ các sân thuộc cơ sở cùng danh sách khung giờ Trống (`AVAILABLE`), Đang giữ chỗ (`HOLD`), Đã đặt (`BOOKED` kèm tên khách, SĐT, mã đơn) và Đang bảo trì (`BLOCKED`).
+  - [x] Kết nối giao diện Lịch biểu trực quan (`/owner/calendar` — `OwnerCalendarPage.jsx`) với API thật.
 
 - **Bước 7: Chủ sân Thống kê Doanh thu, Báo cáo & Dashboard Chủ sân (`payments`, `bookings`)**
   - [ ] Làm API thống kê doanh thu & báo cáo tài chính (`GET /api/v1/owner/revenue?from=...&to=...&facilityId=...`): tính tổng doanh thu thực nhận (`paidAmount`), tổng tiền cọc đã thu, tổng tiền còn phải thu (`remainingAmount`), tổng tiền đã hoàn trả (`refundAmount`), thống kê doanh thu theo từng cơ sở/sân.

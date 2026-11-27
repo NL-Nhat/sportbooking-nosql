@@ -13,6 +13,12 @@ public interface BookingSlotRepository extends MongoRepository<BookingSlot, Stri
 
     List<BookingSlot> findByBookingId(String bookingId);
 
+    List<BookingSlot> findByCourtIdInAndSlotDateAndStatusIn(
+            Collection<String> courtIds,
+            String slotDate,
+            Collection<String> statuses
+    );
+
     List<BookingSlot> findByCourtIdAndStatusInAndEndAtGreaterThan(
             String courtId,
             Collection<String> statuses,

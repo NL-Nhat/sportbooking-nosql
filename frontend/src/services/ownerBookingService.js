@@ -108,5 +108,39 @@ export const ownerBookingService = {
       }
     );
     return normalizeOwnerBooking(response?.data);
+  },
+
+  /**
+   * Lấy dữ liệu lịch biểu đặt sân trực quan theo cơ sở và ngày của Chủ sân
+   * GET /api/v1/owner/calendar?facilityId=...&date=yyyy-MM-dd
+   */
+  getOwnerCalendar: async ({ facilityId = '', date = '' } = {}) => {
+    const params = new URLSearchParams();
+    if (facilityId && facilityId.trim()) {
+      params.set('facilityId', facilityId.trim());
+    }
+    if (date && date.trim()) {
+      params.set('date', date.trim());
+    }
+    const queryString = params.toString();
+    const endpoint = queryString ? `/owner/calendar?${queryString}` : '/owner/calendar';
+
+    const response = await apiRequest(endpoint, {
+      method: 'GET'
+    });
+    const data = response?.data || {};
+    const courts = Array.isArray(data.courts)
+      ? data.courts.map((lane) => ({
+          ...lane,
+          id: lane.courtId || lane._id,
+          _id: lane._id || lane.courtId,
+          slots: Array.isArray(lane.slots) ? lane.slots : []
+        }))
+      : [];
+    return {
+      date: data.date || date,
+      facilityId: data.facilityId || facilityId,
+      courts
+    };
   }
 };
