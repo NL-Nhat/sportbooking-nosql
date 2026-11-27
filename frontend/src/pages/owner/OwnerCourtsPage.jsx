@@ -4,11 +4,13 @@ import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { ownerFacilityService } from '../../services/ownerFacilityService.js';
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
+import { useToast } from '../../contexts/ToastContext.jsx';
 import { resolveAssetUrl } from '../../utils/fileUploadHelper.js';
 import { ROUTES } from '../../constants/routes.js';
 import { Plus, Trophy, Edit, Eye, Search, Clock, AlertCircle, RefreshCw } from 'lucide-react';
 
 export function OwnerCourtsPage() {
+  const { showToast } = useToast();
   const [courts, setCourts] = useState([]);
   const [facilities, setFacilities] = useState([]);
   const [selectedFac, setSelectedFac] = useState('');
@@ -16,6 +18,7 @@ export function OwnerCourtsPage() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [updatingCourtId, setUpdatingCourtId] = useState('');
 
   const fetchOwnerCourtsData = useCallback(async (facId = '', currentStatus = '') => {
     setLoading(true);
@@ -40,6 +43,27 @@ export function OwnerCourtsPage() {
   useEffect(() => {
     fetchOwnerCourtsData(selectedFac, statusFilter);
   }, [fetchOwnerCourtsData, selectedFac, statusFilter]);
+
+  const handleChangeCourtStatus = async (courtId, newStatus) => {
+    setUpdatingCourtId(courtId);
+    try {
+      const updated = await ownerCourtService.updateCourtStatus(courtId, newStatus);
+      setCourts((prev) =>
+        prev.map((c) => ((c.id || c._id) === courtId ? { ...c, ...updated } : c))
+      );
+      const label =
+        newStatus === 'AVAILABLE'
+          ? 'Sẵn sàng'
+          : newStatus === 'MAINTENANCE'
+            ? 'Bảo trì'
+            : 'Tạm ngưng';
+      showToast(`Đã chuyển trạng thái sân sang "${label}" thành công!`, 'success');
+    } catch (err) {
+      showToast(err?.message || 'Không thể đổi trạng thái sân.', 'error');
+    } finally {
+      setUpdatingCourtId('');
+    }
+  };
 
   const filtered = courts.filter((c) => {
     const q = search.trim().toLowerCase();
@@ -110,9 +134,9 @@ export function OwnerCourtsPage() {
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="">Tất cả trạng thái</option>
-              <option value="AVAILABLE">Sẵn sàng (AVAILABLE)</option>
-              <option value="MAINTENANCE">Đang bảo trì (MAINTENANCE)</option>
-              <option value="INACTIVE">Ngừng hoạt động (INACTIVE)</option>
+              <option value="AVAILABLE">Sẵn sàng</option>
+              <option value="MAINTENANCE">Bảo trì</option>
+              <option value="INACTIVE">Tạm ngưng</option>
             </select>
           </div>
         </div>
@@ -242,7 +266,26 @@ export function OwnerCourtsPage() {
                       </div>
                     </td>
                     <td>
-                      <StatusBadge status={court.status} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                        <StatusBadge status={court.status} />
+                        <select
+                          className="form-control"
+                          style={{
+                            height: '28px',
+                            width: '118px',
+                            padding: '2px 6px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600
+                          }}
+                          value={court.status || 'AVAILABLE'}
+                          disabled={updatingCourtId === courtId}
+                          onChange={(e) => handleChangeCourtStatus(courtId, e.target.value)}
+                        >
+                          <option value="AVAILABLE">Sẵn sàng</option>
+                          <option value="MAINTENANCE">Bảo trì</option>
+                          <option value="INACTIVE">Tạm ngưng</option>
+                        </select>
+                      </div>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '8px' }}>

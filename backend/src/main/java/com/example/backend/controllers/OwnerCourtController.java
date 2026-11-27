@@ -2,6 +2,8 @@ package com.example.backend.controllers;
 
 import com.example.backend.dtos.court.CreateCourtRequest;
 import com.example.backend.dtos.court.OwnerCourtDto;
+import com.example.backend.dtos.court.UpdateCourtRequest;
+import com.example.backend.dtos.court.UpdateCourtStatusRequest;
 import com.example.backend.dtos.response.ApiSuccessResponse;
 import com.example.backend.services.OwnerCourtService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,6 +14,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -122,5 +125,35 @@ public class OwnerCourtController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiSuccessResponse.success("Tạo sân thể thao và lưu mẫu khung giờ cho thuê hằng ngày thành công", created));
+    }
+
+    @PatchMapping("/courts/{courtId}")
+    @Operation(summary = "Cập nhật thông tin sân thể thao và mẫu khung giờ cho thuê hằng ngày (DAILY)")
+    public ResponseEntity<ApiSuccessResponse<OwnerCourtDto>> updateCourt(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của sân thể thao")
+            @PathVariable("courtId") String courtId,
+            @RequestBody UpdateCourtRequest request
+    ) {
+        OwnerCourtDto updated = ownerCourtService.updateCourt(authorizationHeader, courtId, request);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Cập nhật thông tin sân và khung giờ cho thuê thành công", updated)
+        );
+    }
+
+    @PatchMapping("/courts/{courtId}/status")
+    @Operation(summary = "Đổi trạng thái hoạt động của sân thể thao (AVAILABLE, MAINTENANCE, INACTIVE)")
+    public ResponseEntity<ApiSuccessResponse<OwnerCourtDto>> updateCourtStatus(
+            @Parameter(hidden = true)
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Parameter(description = "ID của sân thể thao")
+            @PathVariable("courtId") String courtId,
+            @RequestBody UpdateCourtStatusRequest request
+    ) {
+        OwnerCourtDto updated = ownerCourtService.updateCourtStatus(authorizationHeader, courtId, request);
+        return ResponseEntity.ok(
+                ApiSuccessResponse.success("Cập nhật trạng thái sân thể thao thành công", updated)
+        );
     }
 }

@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
+import { useToast } from '../../contexts/ToastContext.jsx';
 import { resolveAssetUrl } from '../../utils/fileUploadHelper.js';
 import { formatCurrency, formatDate, getDayName } from '../../utils/formatters.js';
 import { ROUTES } from '../../constants/routes.js';
@@ -30,9 +31,11 @@ const toMinutes = (t) => {
 
 export function OwnerCourtDetailPage() {
   const { id } = useParams();
+  const { showToast } = useToast();
   const [court, setCourt] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
+  const [statusUpdating, setStatusUpdating] = useState(false);
 
   const fetchCourtDetail = useCallback(async () => {
     if (!id) return;
@@ -51,6 +54,26 @@ export function OwnerCourtDetailPage() {
   useEffect(() => {
     fetchCourtDetail();
   }, [fetchCourtDetail]);
+
+  const handleStatusChange = async (newStatus) => {
+    if (!court || newStatus === court.status) return;
+    setStatusUpdating(true);
+    try {
+      const updated = await ownerCourtService.updateCourtStatus(court.id || court._id, newStatus);
+      setCourt(updated);
+      const statusLabel =
+        newStatus === 'AVAILABLE'
+          ? 'Sẵn sàng'
+          : newStatus === 'MAINTENANCE'
+            ? 'Bảo trì'
+            : 'Tạm ngưng';
+      showToast(`Đã đổi trạng thái sân sang "${statusLabel}" thành công!`, 'success');
+    } catch (err) {
+      showToast(err?.message || 'Không thể đổi trạng thái sân thể thao.', 'error');
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -175,7 +198,23 @@ export function OwnerCourtDetailPage() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '0.82rem', color: 'var(--sb-text-secondary)', fontWeight: 600 }}>
+                Trạng thái sân:
+              </span>
+              <select
+                className="form-control"
+                style={{ height: '34px', width: '140px', padding: '4px 10px', fontSize: '0.84rem', fontWeight: 600 }}
+                value={court.status || 'AVAILABLE'}
+                disabled={statusUpdating}
+                onChange={(e) => handleStatusChange(e.target.value)}
+              >
+                <option value="AVAILABLE">Sẵn sàng</option>
+                <option value="MAINTENANCE">Bảo trì</option>
+                <option value="INACTIVE">Tạm ngưng</option>
+              </select>
+            </div>
             {court.status === 'AVAILABLE' && court.facilityStatus === 'APPROVED' && (
               <Link to={`/courts/${courtId}`} className="btn btn-secondary btn-sm">
                 <ExternalLink size={15} /> Xem trang đặt sân công khai
