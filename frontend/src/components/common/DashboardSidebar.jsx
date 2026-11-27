@@ -40,7 +40,6 @@ export function DashboardSidebar({ role = 'OWNER', isOpen, onClose }) {
     { label: 'Tổng quan', path: ROUTES.OWNER_DASHBOARD, icon: LayoutDashboard },
     { label: 'Cơ sở của tôi', path: ROUTES.OWNER_FACILITIES, icon: Building2 },
     { label: 'Quản lý sân', path: ROUTES.OWNER_COURTS, icon: Trophy },
-    { label: 'Lịch hoạt động', path: ROUTES.OWNER_OPERATING_HOURS, icon: Clock },
     { label: 'Quy tắc giá', path: ROUTES.OWNER_PRICING, icon: DollarSign },
     { label: 'Lịch chặn sân', path: ROUTES.OWNER_BLOCKED_SLOTS, icon: CalendarDays },
     { label: 'Đơn đặt sân', path: ROUTES.OWNER_BOOKINGS, icon: CalendarCheck2 },

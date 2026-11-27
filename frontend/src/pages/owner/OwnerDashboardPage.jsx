@@ -212,8 +212,8 @@ export function OwnerDashboardPage() {
             <Link to={ROUTES.OWNER_CALENDAR} className="btn btn-secondary" style={{ justifyContent: 'space-between' }}>
               <span>Lịch biểu đặt sân trực quan</span> <ArrowRight size={16} />
             </Link>
-            <Link to={ROUTES.OWNER_OPERATING_HOURS} className="btn btn-secondary" style={{ justifyContent: 'space-between' }}>
-              <span>Cấu hình khung giờ hoạt động hằng ngày</span> <ArrowRight size={16} />
+            <Link to={ROUTES.OWNER_COURTS} className="btn btn-secondary" style={{ justifyContent: 'space-between' }}>
+              <span>Quản lý sân & Khung giờ cho thuê</span> <ArrowRight size={16} />
             </Link>
             <Link to={ROUTES.OWNER_PRICING} className="btn btn-secondary" style={{ justifyContent: 'space-between' }}>
               <span>Quản lý quy tắc giá giờ vàng</span> <ArrowRight size={16} />

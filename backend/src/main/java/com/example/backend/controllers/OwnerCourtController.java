@@ -2,10 +2,8 @@ package com.example.backend.controllers;
 
 import com.example.backend.dtos.court.CreateCourtRequest;
 import com.example.backend.dtos.court.OwnerCourtDto;
-import com.example.backend.dtos.court.OwnerOperatingHoursDto;
 import com.example.backend.dtos.court.UpdateCourtRequest;
 import com.example.backend.dtos.court.UpdateCourtStatusRequest;
-import com.example.backend.dtos.court.UpdateOperatingHoursRequest;
 import com.example.backend.dtos.response.ApiSuccessResponse;
 import com.example.backend.services.OwnerCourtService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,7 +17,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -99,39 +96,6 @@ public class OwnerCourtController {
         OwnerCourtDto court = ownerCourtService.getOwnerCourtDetail(authorizationHeader, courtId);
         return ResponseEntity.ok(
                 ApiSuccessResponse.success("Lấy chi tiết sân thể thao thành công", court)
-        );
-    }
-
-    @GetMapping("/courts/{courtId}/operating-hours")
-    @Operation(summary = "Xem cấu hình lịch hoạt động hằng ngày (DAILY) của một sân thể thao thuộc Chủ sân")
-    public ResponseEntity<ApiSuccessResponse<OwnerOperatingHoursDto>> getCourtOperatingHours(
-            @Parameter(hidden = true)
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
-            @Parameter(description = "ID của sân thể thao")
-            @PathVariable("courtId") String courtId
-    ) {
-        OwnerOperatingHoursDto operatingHours = ownerCourtService.getCourtOperatingHours(authorizationHeader, courtId);
-        return ResponseEntity.ok(
-                ApiSuccessResponse.success("Lấy cấu hình lịch hoạt động của sân thành công", operatingHours)
-        );
-    }
-
-    @PutMapping("/courts/{courtId}/operating-hours")
-    @Operation(summary = "Cập nhật cấu hình lịch hoạt động hằng ngày (DAILY) của một sân thể thao thuộc Chủ sân")
-    public ResponseEntity<ApiSuccessResponse<OwnerOperatingHoursDto>> updateCourtOperatingHours(
-            @Parameter(hidden = true)
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
-            @Parameter(description = "ID của sân thể thao")
-            @PathVariable("courtId") String courtId,
-            @RequestBody UpdateOperatingHoursRequest request
-    ) {
-        OwnerOperatingHoursDto updated = ownerCourtService.updateCourtOperatingHours(
-                authorizationHeader,
-                courtId,
-                request
-        );
-        return ResponseEntity.ok(
-                ApiSuccessResponse.success("Cập nhật cấu hình lịch hoạt động của sân thành công", updated)
         );
     }
 

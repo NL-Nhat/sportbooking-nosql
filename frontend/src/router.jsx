@@ -56,7 +56,6 @@ import OwnerFacilityFormPage from './pages/owner/OwnerFacilityFormPage.jsx';
 import OwnerCourtsPage from './pages/owner/OwnerCourtsPage.jsx';
 import OwnerCourtDetailPage from './pages/owner/OwnerCourtDetailPage.jsx';
 import OwnerCourtFormPage from './pages/owner/OwnerCourtFormPage.jsx';
-import OwnerOperatingHoursPage from './pages/owner/OwnerOperatingHoursPage.jsx';
 import OwnerPricingPage from './pages/owner/OwnerPricingPage.jsx';
 import OwnerPriceRuleFormPage from './pages/owner/OwnerPriceRuleFormPage.jsx';
 import OwnerBlockedSlotsPage from './pages/owner/OwnerBlockedSlotsPage.jsx';
@@ -152,7 +151,6 @@ export const router = createBrowserRouter([
       { path: 'courts/new', element: <OwnerCourtFormPage /> },
       { path: 'courts/:id', element: <OwnerCourtDetailPage /> },
       { path: 'courts/:id/edit', element: <OwnerCourtFormPage /> },
-      { path: 'operating-hours', element: <OwnerOperatingHoursPage /> },
       { path: 'pricing', element: <OwnerPricingPage /> },
       { path: 'pricing/new', element: <OwnerPriceRuleFormPage /> },
       { path: 'pricing/:id/edit', element: <OwnerPriceRuleFormPage /> },

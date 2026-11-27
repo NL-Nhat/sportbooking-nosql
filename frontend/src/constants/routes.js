@@ -46,7 +46,6 @@ export const ROUTES = {
   OWNER_COURT_NEW: '/owner/courts/new',
   OWNER_COURT_DETAIL: '/owner/courts/:id',
   OWNER_COURT_EDIT: '/owner/courts/:id/edit',
-  OWNER_OPERATING_HOURS: '/owner/operating-hours',
   OWNER_PRICING: '/owner/pricing',
   OWNER_PRICING_NEW: '/owner/pricing/new',
   OWNER_PRICING_EDIT: '/owner/pricing/:id/edit',
