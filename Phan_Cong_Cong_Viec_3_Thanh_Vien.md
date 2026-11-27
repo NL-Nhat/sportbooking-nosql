@@ -103,13 +103,12 @@
 ### A. Danh sách các chức năng chính cần làm trước (Theo thứ tự từ trên xuống)
 - **Bước 1:** Chủ sân Quản lý Cơ sở thể thao (Thêm, Sửa, Ẩn/Hiện Cơ sở).
 - **Bước 2:** Chủ sân Quản lý Sân thể thao & Thiết lập Khung giờ cho thuê mẫu (`timeSlots`).
-- **Bước 3:** Chủ sân Quản lý chuyên sâu Lịch hoạt động theo từng Sân.
-- **Bước 4:** Chủ sân Quản lý Quy tắc Giá động (Theo Thứ / Ngày cụ thể / Khung giờ).
-- **Bước 5:** Chủ sân Quản lý Lịch chặn sân / Khóa giờ bảo trì.
-- **Bước 6:** Chủ sân Quản lý Đơn đặt sân tại cơ sở, Thu 80% tiền còn lại & Đánh dấu Hoàn thành.
-- **Bước 7:** Chủ sân Xem Lịch biểu Đặt sân Trực quan theo Cơ sở & Ngày.
-- **Bước 8:** Chủ sân Thống kê Doanh thu, Báo cáo tài chính & Dashboard Tổng quan Chủ sân.
-- **Bước 9:** Chủ sân Phản hồi Đánh giá & Giải trình Khiếu nại của Khách hàng.
+- **Bước 3:** Chủ sân Quản lý Quy tắc Giá động (Theo Thứ / Ngày cụ thể / Khung giờ).
+- **Bước 4:** Chủ sân Quản lý Lịch chặn sân / Khóa giờ bảo trì.
+- **Bước 5:** Chủ sân Quản lý Đơn đặt sân tại cơ sở, Thu 80% tiền còn lại & Đánh dấu Hoàn thành.
+- **Bước 6:** Chủ sân Xem Lịch biểu Đặt sân Trực quan theo Cơ sở & Ngày.
+- **Bước 7:** Chủ sân Thống kê Doanh thu, Báo cáo tài chính & Dashboard Tổng quan Chủ sân.
+- **Bước 8:** Chủ sân Phản hồi Đánh giá & Giải trình Khiếu nại của Khách hàng.
 
 ---
 
@@ -137,18 +136,13 @@
   - [x] Làm API cập nhật thông tin sân + khung giờ (`PATCH /api/v1/owner/courts/{id}`) và đổi trạng thái sân (`PATCH /api/v1/owner/courts/{id}/status`).
   - [x] Kết nối giao diện Danh sách sân (`/owner/courts` — `OwnerCourtsPage.jsx`) và Form Thêm/Sửa sân (`/owner/courts/new`, `/owner/courts/:id/edit` — `OwnerCourtFormPage.jsx`) với API thật.
 
-- **Bước 3: Chủ sân Quản lý chuyên sâu Lịch hoạt động theo từng Sân (`operating_hours`)**
-  - [x] Làm API xem cấu hình lịch hoạt động của một sân (`GET /api/v1/owner/courts/{courtId}/operating-hours`).
-  - [x] Làm API cập nhật lịch hoạt động của sân (`PUT /api/v1/owner/courts/{courtId}/operating-hours`): cập nhật `effectiveFrom`, `effectiveTo`, `status` và danh sách các khung giờ `timeSlots` (kiểm tra các khung giờ không giao nhau).
-  - [x] Kết nối giao diện Lịch hoạt động (`/owner/operating-hours` — `OwnerOperatingHoursPage.jsx`) với API thật.
-
-- **Bước 4: Chủ sân Quản lý Quy tắc Giá động (`price_rules`)**
+- **Bước 3: Chủ sân Quản lý Quy tắc Giá động (`price_rules`)**
   - [x] Làm API lấy danh sách quy tắc giá theo sân (`GET /api/v1/owner/price-rules?courtId=...`): sắp xếp theo độ ưu tiên `priority` giảm dần, lọc theo trạng thái (`ACTIVE`, `INACTIVE`).
   - [x] Làm API tạo quy tắc giá mới (`POST /api/v1/owner/price-rules`): lưu `courtId`, `name`, `startTime`, `endTime` (`startTime < endTime`), `pricePerSlot` (`BigDecimal` > 0), `daysOfWeek` (`1..7`), `specificDates` (`yyyy-MM-dd`), `validFrom`, `validTo`, `priority`.
   - [x] Làm API cập nhật quy tắc giá (`PATCH /api/v1/owner/price-rules/{id}`), bật/tắt trạng thái và xóa quy tắc giá (`DELETE /api/v1/owner/price-rules/{id}`).
   - [x] Kết nối giao diện Danh sách quy tắc giá (`/owner/pricing` — `OwnerPricingPage.jsx`) và Form Tạo quy tắc giá (`/owner/pricing/new` — `OwnerPriceRuleFormPage.jsx`) với API thật.
 
-- **Bước 5: Chủ sân Quản lý Lịch chặn sân / Khóa giờ bảo trì (`blocked_slots`)**
+- **Bước 4: Chủ sân Quản lý Lịch chặn sân / Khóa giờ bảo trì (`blocked_slots`)**
   - [ ] Làm API lấy danh sách lịch chặn sân (`GET /api/v1/owner/blocked-slots?courtId=...&date=...`).
   - [ ] Làm API tạo lịch chặn sân mới (`POST /api/v1/owner/blocked-slots`):
     - Kiểm tra `courtId`, `startAt < endAt`, `reason` bắt buộc (ví dụ: *"Bảo trì mặt cỏ"*, *"Giải đấu nội bộ"*).
@@ -156,7 +150,7 @@
   - [ ] Làm API xóa / mở khóa lịch chặn sân (`DELETE /api/v1/owner/blocked-slots/{id}`).
   - [ ] Kết nối giao diện Quản lý lịch chặn sân (`/owner/blocked-slots` — `OwnerBlockedSlotsPage.jsx`) với API thật.
 
-- **Bước 6: Chủ sân Quản lý Đơn đặt sân, Thu 80% tiền còn lại & Đánh dấu Hoàn thành (`bookings`, `payments`)**
+- **Bước 5: Chủ sân Quản lý Đơn đặt sân, Thu 80% tiền còn lại & Đánh dấu Hoàn thành (`bookings`, `payments`)**
   - [ ] Làm API lấy danh sách đơn đặt sân tại các cơ sở của Chủ sân (`GET /api/v1/owner/bookings`): lọc theo `facilityId`, `courtId`, ngày đặt (`bookingDate`), trạng thái thanh toán (`paymentStatus`), tìm kiếm theo `bookingCode`, tên hoặc SĐT khách.
   - [ ] Hiển thị rõ ràng **danh sách các khung giờ đặt sân** của từng đơn trên bảng Quản lý đặt sân (`/owner/bookings` — `OwnerBookingsPage.jsx`, ví dụ: `12:00 - 13:00, 14:00 - 16:00`).
   - [ ] Làm API xác nhận đã thu phần tiền 80% còn lại tại sân (`POST /api/v1/owner/bookings/{id}/collect-remaining`): tạo bản ghi `payments` (`type = "REMAINING"`, `method = "CASH"`, `amount = remainingAmount`, `status = "PAID"`), cập nhật `booking.paidAmount = totalAmount`, `remainingAmount = 0`, `paymentStatus = "PAID"`.
@@ -164,16 +158,16 @@
   - [ ] Làm API Chủ sân hủy đơn đặt sân (`POST /api/v1/owner/bookings/{id}/cancel`): cập nhật `status = "CANCELLED"`, `cancelledBy = "OWNER"`, giải phóng `booking_slots` sang `"RELEASED"`.
   - [ ] Kết nối 2 trang `/owner/bookings` (`OwnerBookingsPage.jsx`) và `/owner/bookings/:id` (`OwnerBookingDetailPage.jsx`) với API thật.
 
-- **Bước 7: Chủ sân Xem Lịch biểu Đặt sân Trực quan (`bookings`, `booking_slots`, `blocked_slots`)**
+- **Bước 6: Chủ sân Xem Lịch biểu Đặt sân Trực quan (`bookings`, `booking_slots`, `blocked_slots`)**
   - [ ] Làm API lấy dữ liệu lịch biểu trực quan theo cơ sở và ngày (`GET /api/v1/owner/calendar?facilityId=...&date=yyyy-MM-dd`): trả về toàn bộ các sân thuộc cơ sở cùng danh sách khung giờ Trống (`AVAILABLE`), Đang giữ chỗ (`HOLD`), Đã đặt (`BOOKED` kèm tên khách, SĐT, mã đơn) và Đang bảo trì (`BLOCKED`).
   - [ ] Kết nối giao diện Lịch biểu trực quan (`/owner/calendar` — `OwnerCalendarPage.jsx`) với API thật.
 
-- **Bước 8: Chủ sân Thống kê Doanh thu, Báo cáo & Dashboard Chủ sân (`payments`, `bookings`)**
+- **Bước 7: Chủ sân Thống kê Doanh thu, Báo cáo & Dashboard Chủ sân (`payments`, `bookings`)**
   - [ ] Làm API thống kê doanh thu & báo cáo tài chính (`GET /api/v1/owner/revenue?from=...&to=...&facilityId=...`): tính tổng doanh thu thực nhận (`paidAmount`), tổng tiền cọc đã thu, tổng tiền còn phải thu (`remainingAmount`), tổng tiền đã hoàn trả (`refundAmount`), thống kê doanh thu theo từng cơ sở/sân.
   - [ ] Làm API lấy số liệu tổng quan cho Dashboard Chủ sân (`GET /api/v1/owner/dashboard/summary`): doanh thu tháng, tổng số đơn đặt sân, số ca đặt sân hôm nay, danh sách các đơn đặt sân mới nhất.
   - [ ] Kết nối giao diện Doanh thu (`/owner/revenue` — `OwnerRevenuePage.jsx`) và Dashboard Chủ sân (`/owner` — `OwnerDashboardPage.jsx`) với API thật.
 
-- **Bước 9: Chủ sân Phản hồi Đánh giá & Giải trình Khiếu nại của Khách hàng (`reviews`, `complaints`)**
+- **Bước 8: Chủ sân Phản hồi Đánh giá & Giải trình Khiếu nại của Khách hàng (`reviews`, `complaints`)**
   - [ ] Làm API Chủ sân xem danh sách đánh giá tại cơ sở của mình (`GET /api/v1/owner/reviews`) và gửi phản hồi cho đánh giá của khách (`POST /api/v1/owner/reviews/{id}/reply`, cập nhật `ownerReply: { content, repliedAt }`).
   - [ ] Làm API Chủ sân xem danh sách khiếu nại tại cơ sở của mình (`GET /api/v1/owner/complaints`) và gửi phản hồi giải trình (`POST /api/v1/owner/complaints/{id}/respond`, cập nhật `ownerResponse` và chuyển trạng thái sang `IN_PROGRESS`).
   - [ ] Kết nối giao diện Quản lý đánh giá (`/owner/reviews` — `OwnerReviewsPage.jsx`) và Quản lý khiếu nại (`/owner/complaints` — `OwnerComplaintsPage.jsx`) với API thật.
