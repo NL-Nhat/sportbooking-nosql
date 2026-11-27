@@ -229,8 +229,7 @@ export function OwnerPricingPage() {
                   <th>Ngày đặc biệt</th>
                   <th>Khung giờ</th>
                   <th>Hiệu lực</th>
-                  <th>Đơn giá / slot</th>
-                  <th>Độ ưu tiên</th>
+                  <th>Đơn giá</th>
                   <th>Trạng thái</th>
                   <th>Thao tác</th>
                 </tr>
@@ -266,24 +265,15 @@ export function OwnerPricingPage() {
                         {r.startTime} - {r.endTime}
                       </td>
                       <td style={{ fontSize: '0.82rem', color: 'var(--sb-text-secondary)' }}>
-                        {r.validFrom || '—'} {r.validTo ? `→ ${r.validTo}` : '(Không giới hạn)'}
+                        {r.validFrom || '—'} {r.validTo ? `→ ${r.validTo}` : ''}
                       </td>
                       <td style={{ fontWeight: 700, color: 'var(--sb-primary-700)', fontSize: '0.95rem' }}>
                         {formatCurrency(r.pricePerSlot)}
                       </td>
-                      <td>Mức {r.priority}</td>
+                    
                       <td>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
                           <StatusBadge status={r.status} />
-                          <button
-                            type="button"
-                            className="btn btn-secondary btn-sm"
-                            style={{ padding: '2px 8px', fontSize: '0.72rem' }}
-                            disabled={isBusy}
-                            onClick={() => handleToggleStatus(r)}
-                          >
-                            {r.status === 'ACTIVE' ? 'Tạm ngưng' : 'Bật áp dụng'}
-                          </button>
                         </div>
                       </td>
                       <td>

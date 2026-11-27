@@ -190,7 +190,6 @@ export function OwnerCourtsPage() {
                 <th>Tên sân</th>
                 <th>Môn thể thao</th>
                 <th>Cơ sở trực thuộc</th>
-                <th>Khung giờ cho thuê (Hằng ngày)</th>
                 <th>Mặt sân & Sức chứa</th>
                 <th>Trạng thái</th>
                 <th>Thao tác</th>
@@ -229,37 +228,6 @@ export function OwnerCourtsPage() {
                     </td>
                     <td>{facilityName}</td>
                     <td>
-                      {slots.length === 0 ? (
-                        <span style={{ fontSize: '0.78rem', color: 'var(--sb-text-muted)' }}>Chưa cấu hình</span>
-                      ) : (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxWidth: '300px' }}>
-                          {previewSlots.map((s, i) => (
-                            <span
-                              key={i}
-                              style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '3px',
-                                padding: '2px 6px',
-                                backgroundColor: 'var(--sb-primary-50)',
-                                color: 'var(--sb-primary-700)',
-                                borderRadius: '4px',
-                                fontSize: '0.72rem',
-                                fontWeight: 600
-                              }}
-                            >
-                              <Clock size={11} /> {s.startTime}-{s.endTime}
-                            </span>
-                          ))}
-                          {moreCount > 0 && (
-                            <span style={{ fontSize: '0.72rem', color: 'var(--sb-text-secondary)', fontWeight: 600, alignSelf: 'center' }}>
-                              +{moreCount} khung giờ
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td>
                       <div>{court.attributes?.surfaceType || court.attributes?.surface || 'Tiêu chuẩn'}</div>
                       <div style={{ fontSize: '0.75rem', color: 'var(--sb-text-muted)' }}>
                         {court.attributes?.indoor ? 'Trong nhà' : 'Ngoài trời'} • {court.capacity || 4} người
@@ -268,23 +236,6 @@ export function OwnerCourtsPage() {
                     <td>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
                         <StatusBadge status={court.status} />
-                        <select
-                          className="form-control"
-                          style={{
-                            height: '28px',
-                            width: '118px',
-                            padding: '2px 6px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600
-                          }}
-                          value={court.status || 'AVAILABLE'}
-                          disabled={updatingCourtId === courtId}
-                          onChange={(e) => handleChangeCourtStatus(courtId, e.target.value)}
-                        >
-                          <option value="AVAILABLE">Sẵn sàng</option>
-                          <option value="MAINTENANCE">Bảo trì</option>
-                          <option value="INACTIVE">Tạm ngưng</option>
-                        </select>
                       </div>
                     </td>
                     <td>
