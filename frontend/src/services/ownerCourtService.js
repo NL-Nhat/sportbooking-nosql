@@ -162,5 +162,78 @@ export const ownerCourtService = {
       body: JSON.stringify(payload)
     });
     return normalizeCourt(response?.data);
+  },
+
+  /**
+   * Cập nhật thông tin sân thể thao kèm cấu hình khung giờ cho thuê hằng ngày (DAILY)
+   * PATCH /api/v1/owner/courts/{courtId}
+   */
+  updateCourt: async (
+    courtId,
+    {
+      facilityId,
+      categoryId,
+      name,
+      description,
+      attributes,
+      capacity,
+      status,
+      images,
+      timeSlots,
+      effectiveFrom,
+      effectiveTo
+    }
+  ) => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const normalizedTimeSlots = Array.isArray(timeSlots)
+      ? timeSlots.map((slot) => ({
+          startTime: slot.startTime,
+          endTime: slot.endTime
+        }))
+      : undefined;
+
+    const payload = {
+      facilityId,
+      categoryId,
+      name: name?.trim(),
+      description: description !== undefined ? description.trim() : undefined,
+      attributes: attributes || undefined,
+      capacity: capacity !== undefined ? Number(capacity) || 4 : undefined,
+      status: status || undefined,
+      images: Array.isArray(images)
+        ? images.map((img) =>
+            typeof img === 'object' ? img : { url: img, alt: name?.trim() || 'Court image' }
+          )
+        : undefined,
+      timeSlots: normalizedTimeSlots,
+      effectiveFrom: effectiveFrom || undefined,
+      effectiveTo: effectiveTo !== undefined ? effectiveTo : undefined,
+      operatingHours: normalizedTimeSlots
+        ? {
+            repeatMode: 'DAILY',
+            effectiveFrom: effectiveFrom || todayStr,
+            effectiveTo: effectiveTo || null,
+            timeSlots: normalizedTimeSlots
+          }
+        : undefined
+    };
+
+    const response = await apiRequest(`/owner/courts/${encodeURIComponent(courtId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+    return normalizeCourt(response?.data);
+  },
+
+  /**
+   * Đổi trạng thái sân thể thao (AVAILABLE / MAINTENANCE / INACTIVE)
+   * PATCH /api/v1/owner/courts/{courtId}/status
+   */
+  updateCourtStatus: async (courtId, status) => {
+    const response = await apiRequest(`/owner/courts/${encodeURIComponent(courtId)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+    return normalizeCourt(response?.data);
   }
 };

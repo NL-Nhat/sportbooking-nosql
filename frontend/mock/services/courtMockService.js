@@ -94,38 +94,6 @@ export const courtMockService = {
     return courtRepo.find((c) => c.facilityId === facilityId);
   },
 
-  update: async (id, data) => {
-    const { timeSlots, effectiveFrom, effectiveTo, ...courtPayload } = data;
-    const updatedCourt = courtRepo.update(id, courtPayload);
-
-    if (Array.isArray(timeSlots)) {
-      const now = new Date().toISOString();
-      const sortedSlots = [...timeSlots].sort((a, b) => a.startTime.localeCompare(b.startTime));
-      const existingOp = opRepo.findOne((o) => o.courtId === id);
-      if (existingOp) {
-        opRepo.update(existingOp._id, {
-          repeatMode: "DAILY",
-          effectiveFrom: effectiveFrom || existingOp.effectiveFrom || now.slice(0, 10),
-          effectiveTo: effectiveTo !== undefined ? effectiveTo : existingOp.effectiveTo,
-          timeSlots: sortedSlots,
-          updatedAt: now
-        });
-      } else {
-        opRepo.create({
-          courtId: id,
-          repeatMode: "DAILY",
-          effectiveFrom: effectiveFrom || now.slice(0, 10),
-          effectiveTo: effectiveTo || null,
-          timeSlots: sortedSlots,
-          createdAt: now,
-          updatedAt: now
-        });
-      }
-    }
-
-    return updatedCourt;
-  },
-
   // Tính toán các slot trong ngày cho sân (AVAILABLE, BOOKED, HOLD, BLOCKED)
   getAvailableSlots: async (courtId, dateStr) => {
     const court = courtRepo.findById(courtId);

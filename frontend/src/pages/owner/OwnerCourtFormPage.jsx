@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { ownerFacilityService } from '../../services/ownerFacilityService.js';
-import { courtMockService } from '../../../mock/services/courtMockService.js';
 import { useToast } from '../../contexts/ToastContext.jsx';
 import { ROUTES } from '../../constants/routes.js';
 import { uploadFileToServer, resolveAssetUrl } from '../../utils/fileUploadHelper.js';
@@ -241,13 +240,14 @@ export function OwnerCourtFormPage() {
       };
 
       if (isEdit) {
-        await courtMockService.update(id, payload);
+        await ownerCourtService.updateCourt(id, payload);
         showToast('Cập nhật thông tin sân và khung giờ cho thuê thành công!', 'success');
+        navigate(`/owner/courts/${id}`);
       } else {
         await ownerCourtService.createCourt(payload);
         showToast('Tạo sân mới và lưu các khung giờ cho thuê hằng ngày thành công!', 'success');
+        navigate(ROUTES.OWNER_COURTS);
       }
-      navigate(ROUTES.OWNER_COURTS);
     } catch (err) {
       showToast(err?.message || 'Không thể lưu thông tin sân thể thao.', 'error');
     } finally {

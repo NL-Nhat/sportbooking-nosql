@@ -2,8 +2,11 @@ package com.example.backend.services;
 
 import com.example.backend.dtos.court.CreateCourtRequest;
 import com.example.backend.dtos.court.OwnerCourtDto;
+import com.example.backend.dtos.court.UpdateCourtRequest;
+import com.example.backend.dtos.court.UpdateCourtStatusRequest;
 import com.example.backend.dtos.response.ApiErrorResponse.FieldErrorDetail;
 import com.example.backend.exceptions.AppException;
+import com.example.backend.models.BookingSlot;
 import com.example.backend.models.Court;
 import com.example.backend.models.Facility;
 import com.example.backend.models.OperatingHours;
@@ -12,6 +15,7 @@ import com.example.backend.models.SportsCategory;
 import com.example.backend.models.User;
 import com.example.backend.models.embedded.ImageItem;
 import com.example.backend.models.embedded.TimeSlot;
+import com.example.backend.repositories.BookingSlotRepository;
 import com.example.backend.repositories.CourtRepository;
 import com.example.backend.repositories.FacilityRepository;
 import com.example.backend.repositories.OperatingHoursRepository;
@@ -52,6 +56,7 @@ public class OwnerCourtService {
     private final FacilityRepository facilityRepository;
     private final OperatingHoursRepository operatingHoursRepository;
     private final PriceRuleRepository priceRuleRepository;
+    private final BookingSlotRepository bookingSlotRepository;
     private final SportsCategoryRepository sportsCategoryRepository;
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
@@ -169,38 +174,8 @@ public class OwnerCourtService {
 
     public OwnerCourtDto getOwnerCourtDetail(String authorizationHeader, String courtId) {
         User owner = authenticateOwner(authorizationHeader);
-
-        if (courtId == null || courtId.isBlank()) {
-            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_COURT_ID", "Mã sân thể thao không hợp lệ");
-        }
-
-        Court court = courtRepository.findById(courtId.trim())
-                .orElseThrow(() -> new AppException(
-                        HttpStatus.NOT_FOUND,
-                        "COURT_NOT_FOUND",
-                        "Không tìm thấy sân thể thao"
-                ));
-
-        Facility facility = court.getFacilityId() != null
-                ? facilityRepository.findById(court.getFacilityId()).orElse(null)
-                : null;
-
-        if (facility == null || !owner.getId().equals(facility.getOwnerId())) {
-            throw new AppException(
-                    HttpStatus.NOT_FOUND,
-                    "COURT_NOT_FOUND",
-                    "Không tìm thấy sân thể thao thuộc quyền sở hữu của bạn"
-            );
-        }
-
-        SportsCategory category = court.getCategoryId() != null
-                ? sportsCategoryRepository.findById(court.getCategoryId()).orElse(null)
-                : null;
-
-        OperatingHours operatingHours = operatingHoursRepository.findByCourtId(court.getId()).orElse(null);
-        List<PriceRule> priceRules = priceRuleRepository.findByCourtIdOrderByPriorityDesc(court.getId());
-
-        return toDto(court, facility, category, operatingHours, priceRules);
+        Court court = findOwnedCourtOrThrow(owner.getId(), courtId);
+        return buildCourtDetailDto(court);
     }
 
     public OwnerCourtDto createCourt(
@@ -290,21 +265,7 @@ public class OwnerCourtService {
             throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu tạo sân không hợp lệ", errors);
         }
 
-        Facility facility = facilityRepository.findById(facilityId)
-                .orElseThrow(() -> new AppException(
-                        HttpStatus.NOT_FOUND,
-                        "FACILITY_NOT_FOUND",
-                        "Không tìm thấy cơ sở thể thao"
-                ));
-
-        if (!owner.getId().equals(facility.getOwnerId())) {
-            throw new AppException(
-                    HttpStatus.NOT_FOUND,
-                    "FACILITY_NOT_FOUND",
-                    "Không tìm thấy cơ sở thể thao thuộc quyền sở hữu của bạn"
-            );
-        }
-
+        Facility facility = findOwnedFacilityOrThrow(owner.getId(), facilityId);
         SportsCategory category = resolveActiveCategory(rawCategoryId);
 
         Map<String, Object> sanitizedAttributes = sanitizeAttributes(request.getAttributes());
@@ -339,6 +300,306 @@ public class OwnerCourtService {
         OperatingHours savedOperatingHours = operatingHoursRepository.save(operatingHours);
 
         return toDto(savedCourt, facility, category, savedOperatingHours, Collections.emptyList());
+    }
+
+    public OwnerCourtDto updateCourt(
+            String authorizationHeader,
+            String courtId,
+            UpdateCourtRequest request
+    ) {
+        User owner = authenticateOwner(authorizationHeader);
+        Court court = findOwnedCourtOrThrow(owner.getId(), courtId);
+
+        if (request == null) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu cập nhật sân không được để trống");
+        }
+
+        String targetFacilityId = request.getFacilityId() != null && !request.getFacilityId().trim().isEmpty()
+                ? request.getFacilityId().trim()
+                : court.getFacilityId();
+
+        Facility targetFacility = findOwnedFacilityOrThrow(owner.getId(), targetFacilityId);
+
+        SportsCategory targetCategory;
+        if (request.getCategoryId() != null && !request.getCategoryId().trim().isEmpty()) {
+            targetCategory = resolveActiveCategory(request.getCategoryId().trim());
+        } else {
+            targetCategory = court.getCategoryId() != null
+                    ? sportsCategoryRepository.findById(court.getCategoryId()).orElse(null)
+                    : null;
+        }
+
+        String name = request.getName() != null
+                ? request.getName().trim().replaceAll("\\s+", " ")
+                : (court.getName() != null ? court.getName() : "");
+
+        String description = request.getDescription() != null
+                ? request.getDescription().trim()
+                : (court.getDescription() != null ? court.getDescription() : "");
+
+        Integer capacity = request.getCapacity() != null
+                ? request.getCapacity()
+                : (court.getCapacity() != null ? court.getCapacity() : 4);
+
+        String targetStatus = request.getStatus() != null && !request.getStatus().trim().isEmpty()
+                ? request.getStatus().trim().toUpperCase(Locale.ROOT)
+                : (court.getStatus() != null ? court.getStatus() : "AVAILABLE");
+
+        List<FieldErrorDetail> errors = new ArrayList<>();
+
+        if (name.isEmpty()) {
+            errors.add(new FieldErrorDetail("name", "REQUIRED", "Tên sân không được để trống"));
+        } else if (name.length() < 2 || name.length() > 150) {
+            errors.add(new FieldErrorDetail("name", "INVALID_LENGTH", "Tên sân phải từ 2 đến 150 ký tự"));
+        }
+
+        if (capacity < 1 || capacity > 500) {
+            errors.add(new FieldErrorDetail("capacity", "OUT_OF_RANGE", "Sức chứa của sân phải từ 1 đến 500 người"));
+        }
+
+        if (!Set.of("AVAILABLE", "MAINTENANCE", "INACTIVE").contains(targetStatus)) {
+            errors.add(new FieldErrorDetail("status", "INVALID_VALUE", "Trạng thái sân phải là AVAILABLE, MAINTENANCE hoặc INACTIVE"));
+        }
+
+        List<TimeSlot> rawTimeSlots = request.getTimeSlots();
+        String rawEffectiveFrom = request.getEffectiveFrom();
+        String rawEffectiveTo = request.getEffectiveTo();
+        boolean hasEffectiveToField = request.getEffectiveTo() != null;
+
+        if (request.getOperatingHours() != null) {
+            if (request.getOperatingHours().getTimeSlots() != null) {
+                rawTimeSlots = request.getOperatingHours().getTimeSlots();
+            }
+            if (request.getOperatingHours().getEffectiveFrom() != null) {
+                rawEffectiveFrom = request.getOperatingHours().getEffectiveFrom();
+            }
+            if (request.getOperatingHours().getEffectiveTo() != null) {
+                rawEffectiveTo = request.getOperatingHours().getEffectiveTo();
+                hasEffectiveToField = true;
+            }
+        }
+
+        List<TimeSlot> validatedSlots = null;
+        if (rawTimeSlots != null) {
+            validatedSlots = validateAndSortTimeSlots(rawTimeSlots, errors);
+        }
+
+        OperatingHours existingOp = operatingHoursRepository.findByCourtId(court.getId()).orElse(null);
+
+        String effectiveFrom = rawEffectiveFrom != null && !rawEffectiveFrom.trim().isEmpty()
+                ? rawEffectiveFrom.trim()
+                : (existingOp != null && existingOp.getEffectiveFrom() != null
+                        ? existingOp.getEffectiveFrom()
+                        : LocalDate.now(DEFAULT_ZONE).toString());
+
+        if (!DATE_YYYY_MM_DD_PATTERN.matcher(effectiveFrom).matches()) {
+            errors.add(new FieldErrorDetail("effectiveFrom", "INVALID_FORMAT", "Ngày bắt đầu áp dụng (effectiveFrom) phải có định dạng yyyy-MM-dd"));
+        }
+
+        String effectiveTo;
+        if (hasEffectiveToField) {
+            effectiveTo = !rawEffectiveTo.trim().isEmpty() ? rawEffectiveTo.trim() : null;
+        } else {
+            effectiveTo = existingOp != null ? existingOp.getEffectiveTo() : null;
+        }
+
+        if (effectiveTo != null) {
+            if (!DATE_YYYY_MM_DD_PATTERN.matcher(effectiveTo).matches()) {
+                errors.add(new FieldErrorDetail("effectiveTo", "INVALID_FORMAT", "Ngày kết thúc (effectiveTo) phải có định dạng yyyy-MM-dd"));
+            } else if (effectiveTo.compareTo(effectiveFrom) < 0) {
+                errors.add(new FieldErrorDetail("effectiveTo", "INVALID_RANGE", "Ngày kết thúc (effectiveTo) phải lớn hơn hoặc bằng ngày bắt đầu (effectiveFrom)"));
+            }
+        }
+
+        if (!errors.isEmpty()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "Dữ liệu cập nhật sân không hợp lệ", errors);
+        }
+
+        // Theo Database_Design.md & Backend Guidelines 6.4:
+        // Không chuyển sân sang INACTIVE/MAINTENANCE nếu còn booking tương lai chưa xử lý
+        if (!targetStatus.equalsIgnoreCase(court.getStatus())
+                && ("INACTIVE".equals(targetStatus) || "MAINTENANCE".equals(targetStatus))) {
+            ensureNoFutureActiveBookings(court.getId(), targetStatus);
+        }
+
+        Instant now = Instant.now();
+        court.setFacilityId(targetFacility.getId());
+        if (targetCategory != null) {
+            court.setCategoryId(targetCategory.getId());
+        }
+        court.setName(name);
+        court.setDescription(description);
+        court.setCapacity(capacity);
+        court.setStatus(targetStatus);
+
+        if (request.getAttributes() != null) {
+            court.setAttributes(sanitizeAttributes(request.getAttributes()));
+        }
+        if (request.getImages() != null) {
+            court.setImages(parseImageItems(request.getImages(), name));
+        }
+
+        court.setUpdatedAt(now);
+        Court savedCourt = courtRepository.save(court);
+
+        if (validatedSlots != null || rawEffectiveFrom != null || hasEffectiveToField) {
+            if (existingOp != null) {
+                existingOp.setRepeatMode("DAILY");
+                existingOp.setEffectiveFrom(effectiveFrom);
+                existingOp.setEffectiveTo(effectiveTo);
+                if (validatedSlots != null) {
+                    existingOp.setTimeSlots(validatedSlots);
+                }
+                existingOp.setUpdatedAt(now);
+                operatingHoursRepository.save(existingOp);
+            } else if (validatedSlots != null) {
+                OperatingHours newOp = OperatingHours.builder()
+                        .courtId(savedCourt.getId())
+                        .repeatMode("DAILY")
+                        .effectiveFrom(effectiveFrom)
+                        .effectiveTo(effectiveTo)
+                        .timeSlots(validatedSlots)
+                        .createdAt(now)
+                        .updatedAt(now)
+                        .build();
+                operatingHoursRepository.save(newOp);
+            }
+        }
+
+        return buildCourtDetailDto(savedCourt);
+    }
+
+    public OwnerCourtDto updateCourtStatus(
+            String authorizationHeader,
+            String courtId,
+            UpdateCourtStatusRequest request
+    ) {
+        User owner = authenticateOwner(authorizationHeader);
+        Court court = findOwnedCourtOrThrow(owner.getId(), courtId);
+
+        String targetStatus = request != null && request.getStatus() != null
+                ? request.getStatus().trim().toUpperCase(Locale.ROOT)
+                : "";
+
+        if (targetStatus.isEmpty()) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "VALIDATION_ERROR",
+                    "Trạng thái sân không được để trống",
+                    Collections.singletonList(new FieldErrorDetail("status", "REQUIRED", "Vui lòng chọn trạng thái sân"))
+            );
+        }
+
+        if (!Set.of("AVAILABLE", "MAINTENANCE", "INACTIVE").contains(targetStatus)) {
+            throw new AppException(
+                    HttpStatus.BAD_REQUEST,
+                    "INVALID_COURT_STATUS",
+                    "Trạng thái sân không hợp lệ. Chỉ chấp nhận AVAILABLE (Sẵn sàng), MAINTENANCE (Bảo trì) hoặc INACTIVE (Tạm ngưng)."
+            );
+        }
+
+        if (!targetStatus.equalsIgnoreCase(court.getStatus())
+                && ("INACTIVE".equals(targetStatus) || "MAINTENANCE".equals(targetStatus))) {
+            ensureNoFutureActiveBookings(court.getId(), targetStatus);
+        }
+
+        court.setStatus(targetStatus);
+        court.setUpdatedAt(Instant.now());
+        Court savedCourt = courtRepository.save(court);
+
+        return buildCourtDetailDto(savedCourt);
+    }
+
+    private void ensureNoFutureActiveBookings(String courtId, String targetStatus) {
+        Instant now = Instant.now();
+        List<BookingSlot> futureSlots = bookingSlotRepository.findByCourtIdAndStatusInAndEndAtGreaterThan(
+                courtId,
+                List.of("HOLD", "BOOKED"),
+                now
+        );
+
+        boolean hasActiveFutureSlot = futureSlots.stream().anyMatch(slot -> {
+            if ("BOOKED".equalsIgnoreCase(slot.getStatus())) {
+                return true;
+            }
+            if ("HOLD".equalsIgnoreCase(slot.getStatus())) {
+                return slot.getExpiresAt() == null || slot.getExpiresAt().isAfter(now);
+            }
+            return false;
+        });
+
+        if (hasActiveFutureSlot) {
+            String statusLabel = "MAINTENANCE".equals(targetStatus) ? "Bảo trì" : "Tạm ngưng";
+            throw new AppException(
+                    HttpStatus.UNPROCESSABLE_ENTITY,
+                    "COURT_HAS_FUTURE_BOOKINGS",
+                    "Không thể chuyển sân sang trạng thái '" + statusLabel
+                            + "' vì sân đang có lịch đặt hoặc giữ chỗ trong tương lai chưa được xử lý"
+            );
+        }
+    }
+
+    private Court findOwnedCourtOrThrow(String ownerId, String courtId) {
+        if (courtId == null || courtId.isBlank()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_COURT_ID", "Mã sân thể thao không hợp lệ");
+        }
+
+        Court court = courtRepository.findById(courtId.trim())
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "COURT_NOT_FOUND",
+                        "Không tìm thấy sân thể thao"
+                ));
+
+        Facility facility = court.getFacilityId() != null
+                ? facilityRepository.findById(court.getFacilityId()).orElse(null)
+                : null;
+
+        if (facility == null || !ownerId.equals(facility.getOwnerId())) {
+            throw new AppException(
+                    HttpStatus.NOT_FOUND,
+                    "COURT_NOT_FOUND",
+                    "Không tìm thấy sân thể thao thuộc quyền sở hữu của bạn"
+            );
+        }
+
+        return court;
+    }
+
+    private Facility findOwnedFacilityOrThrow(String ownerId, String facilityId) {
+        if (facilityId == null || facilityId.isBlank()) {
+            throw new AppException(HttpStatus.BAD_REQUEST, "INVALID_FACILITY_ID", "Mã cơ sở thể thao không hợp lệ");
+        }
+
+        Facility facility = facilityRepository.findById(facilityId.trim())
+                .orElseThrow(() -> new AppException(
+                        HttpStatus.NOT_FOUND,
+                        "FACILITY_NOT_FOUND",
+                        "Không tìm thấy cơ sở thể thao"
+                ));
+
+        if (!ownerId.equals(facility.getOwnerId())) {
+            throw new AppException(
+                    HttpStatus.NOT_FOUND,
+                    "FACILITY_NOT_FOUND",
+                    "Không tìm thấy cơ sở thể thao thuộc quyền sở hữu của bạn"
+            );
+        }
+
+        return facility;
+    }
+
+    private OwnerCourtDto buildCourtDetailDto(Court court) {
+        Facility facility = court.getFacilityId() != null
+                ? facilityRepository.findById(court.getFacilityId()).orElse(null)
+                : null;
+        SportsCategory category = court.getCategoryId() != null
+                ? sportsCategoryRepository.findById(court.getCategoryId()).orElse(null)
+                : null;
+        OperatingHours operatingHours = operatingHoursRepository.findByCourtId(court.getId()).orElse(null);
+        List<PriceRule> priceRules = priceRuleRepository.findByCourtIdOrderByPriorityDesc(court.getId());
+
+        return toDto(court, facility, category, operatingHours, priceRules);
     }
 
     private SportsCategory resolveActiveCategory(String categoryIdOrCode) {
