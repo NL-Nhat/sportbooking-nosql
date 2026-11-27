@@ -49,6 +49,7 @@ export const ROUTES = {
   OWNER_OPERATING_HOURS: '/owner/operating-hours',
   OWNER_PRICING: '/owner/pricing',
   OWNER_PRICING_NEW: '/owner/pricing/new',
+  OWNER_PRICING_EDIT: '/owner/pricing/:id/edit',
   OWNER_BLOCKED_SLOTS: '/owner/blocked-slots',
   OWNER_BOOKINGS: '/owner/bookings',
   OWNER_BOOKING_DETAIL: '/owner/bookings/:id',

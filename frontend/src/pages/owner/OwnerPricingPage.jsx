@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
+import { useToast } from '../../contexts/ToastContext.jsx';
 import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { ownerPriceRuleService } from '../../services/ownerPriceRuleService.js';
 import { formatCurrency, getDayName } from '../../utils/formatters.js';
 import { StatusBadge } from '../../components/ui/StatusBadge.jsx';
 import { EmptyState } from '../../components/ui/EmptyState.jsx';
 import { ROUTES } from '../../constants/routes.js';
-import { Plus, DollarSign, AlertCircle, RefreshCw } from 'lucide-react';
+import { Plus, DollarSign, Edit, Trash2, AlertCircle, RefreshCw } from 'lucide-react';
 
 export function OwnerPricingPage() {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const [courts, setCourts] = useState([]);
   const [selectedCourtId, setSelectedCourtId] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -18,6 +20,7 @@ export function OwnerPricingPage() {
   const [loadingCourts, setLoadingCourts] = useState(true);
   const [loadingRules, setLoadingRules] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [busyRuleId, setBusyRuleId] = useState('');
 
   useEffect(() => {
     if (!user) return;
@@ -61,6 +64,49 @@ export function OwnerPricingPage() {
       fetchPriceRules(selectedCourtId, statusFilter);
     }
   }, [selectedCourtId, statusFilter, fetchPriceRules]);
+
+  const handleToggleStatus = async (rule) => {
+    const ruleId = rule.id || rule._id;
+    const nextStatus = rule.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
+    setBusyRuleId(ruleId);
+    try {
+      const updated = await ownerPriceRuleService.togglePriceRuleStatus(ruleId, nextStatus);
+      setPriceRules((prev) => {
+        const nextList = prev.map((item) => ((item.id || item._id) === ruleId ? updated : item));
+        if (statusFilter && statusFilter !== nextStatus) {
+          return nextList.filter((item) => (item.id || item._id) !== ruleId);
+        }
+        return nextList;
+      });
+      showToast(
+        nextStatus === 'ACTIVE'
+          ? `Đã bật áp dụng quy tắc giá "${rule.name}"!`
+          : `Đã tạm ngưng quy tắc giá "${rule.name}"!`,
+        'success'
+      );
+    } catch (err) {
+      showToast(err?.message || 'Không thể đổi trạng thái quy tắc giá.', 'error');
+    } finally {
+      setBusyRuleId('');
+    }
+  };
+
+  const handleDeleteRule = async (rule) => {
+    const ruleId = rule.id || rule._id;
+    const confirmed = window.confirm(`Bạn có chắc chắn muốn xóa quy tắc giá "${rule.name}" không?`);
+    if (!confirmed) return;
+
+    setBusyRuleId(ruleId);
+    try {
+      await ownerPriceRuleService.deletePriceRule(ruleId);
+      setPriceRules((prev) => prev.filter((item) => (item.id || item._id) !== ruleId));
+      showToast(`Đã xóa quy tắc giá "${rule.name}" thành công!`, 'success');
+    } catch (err) {
+      showToast(err?.message || 'Không thể xóa quy tắc giá.', 'error');
+    } finally {
+      setBusyRuleId('');
+    }
+  };
 
   return (
     <div>
@@ -186,11 +232,13 @@ export function OwnerPricingPage() {
                   <th>Đơn giá / slot</th>
                   <th>Độ ưu tiên</th>
                   <th>Trạng thái</th>
+                  <th>Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {priceRules.map((r) => {
                   const ruleId = r.id || r._id;
+                  const isBusy = busyRuleId === ruleId;
                   return (
                     <tr key={ruleId}>
                       <td style={{ fontWeight: 700 }}>{r.name}</td>
@@ -225,7 +273,38 @@ export function OwnerPricingPage() {
                       </td>
                       <td>Mức {r.priority}</td>
                       <td>
-                        <StatusBadge status={r.status} />
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'flex-start' }}>
+                          <StatusBadge status={r.status} />
+                          <button
+                            type="button"
+                            className="btn btn-secondary btn-sm"
+                            style={{ padding: '2px 8px', fontSize: '0.72rem' }}
+                            disabled={isBusy}
+                            onClick={() => handleToggleStatus(r)}
+                          >
+                            {r.status === 'ACTIVE' ? 'Tạm ngưng' : 'Bật áp dụng'}
+                          </button>
+                        </div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          <Link
+                            to={`/owner/pricing/${ruleId}/edit`}
+                            className="btn btn-secondary btn-sm"
+                            title="Chỉnh sửa quy tắc giá"
+                          >
+                            <Edit size={14} />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRule(r)}
+                            className="btn btn-secondary btn-sm"
+                            title="Xóa quy tắc giá"
+                            disabled={isBusy}
+                          >
+                            <Trash2 size={14} color="var(--sb-danger)" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

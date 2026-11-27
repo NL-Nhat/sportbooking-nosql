@@ -155,6 +155,7 @@ export const router = createBrowserRouter([
       { path: 'operating-hours', element: <OwnerOperatingHoursPage /> },
       { path: 'pricing', element: <OwnerPricingPage /> },
       { path: 'pricing/new', element: <OwnerPriceRuleFormPage /> },
+      { path: 'pricing/:id/edit', element: <OwnerPriceRuleFormPage /> },
       { path: 'blocked-slots', element: <OwnerBlockedSlotsPage /> },
       { path: 'bookings', element: <OwnerBookingsPage /> },
       { path: 'bookings/:id', element: <OwnerBookingDetailPage /> },

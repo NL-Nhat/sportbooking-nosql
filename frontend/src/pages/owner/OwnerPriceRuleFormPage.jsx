@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { ownerCourtService } from '../../services/ownerCourtService.js';
 import { ownerPriceRuleService } from '../../services/ownerPriceRuleService.js';
@@ -8,6 +8,8 @@ import { ROUTES } from '../../constants/routes.js';
 import { ArrowLeft, Save } from 'lucide-react';
 
 export function OwnerPriceRuleFormPage() {
+  const { id } = useParams();
+  const isEdit = Boolean(id);
   const [searchParams] = useSearchParams();
   const preCourtId = searchParams.get('courtId') || '';
   const navigate = useNavigate();
@@ -26,25 +28,55 @@ export function OwnerPriceRuleFormPage() {
   const [pricePerSlot, setPricePerSlot] = useState(250000);
   const [priority, setPriority] = useState(2);
   const [status, setStatus] = useState('ACTIVE');
-  const [loadingCourts, setLoadingCourts] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
-    setLoadingCourts(true);
+    let isMounted = true;
+    setLoading(true);
+
     ownerCourtService
       .getMyCourts()
       .catch(() => [])
-      .then((list) => {
+      .then(async (list) => {
+        if (!isMounted) return;
         setCourts(list);
-        if (list.length > 0 && !preCourtId) {
+        if (list.length > 0 && !preCourtId && !isEdit) {
           setCourtId(list[0].id || list[0]._id);
+        }
+
+        if (isEdit) {
+          const rule = await ownerPriceRuleService.getPriceRuleById(id).catch(() => null);
+          if (isMounted && rule) {
+            setCourtId(rule.courtId || '');
+            setName(rule.name || '');
+            setDaysOfWeek(Array.isArray(rule.daysOfWeek) ? rule.daysOfWeek : []);
+            setSpecificDatesInput(
+              Array.isArray(rule.specificDates) && rule.specificDates.length > 0
+                ? rule.specificDates.join(', ')
+                : ''
+            );
+            setValidFrom(rule.validFrom || new Date().toISOString().slice(0, 10));
+            setValidTo(rule.validTo || '');
+            setStartTime(rule.startTime || '17:00');
+            setEndTime(rule.endTime || '22:00');
+            setPricePerSlot(rule.pricePerSlot || 100000);
+            setPriority(rule.priority || 1);
+            setStatus(rule.status || 'ACTIVE');
+          }
         }
       })
       .finally(() => {
-        setLoadingCourts(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       });
-  }, [user, preCourtId]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [user, preCourtId, id, isEdit]);
 
   const toggleDay = (day) => {
     if (daysOfWeek.includes(day)) {
@@ -94,7 +126,7 @@ export function OwnerPriceRuleFormPage() {
 
     setSubmitting(true);
     try {
-      await ownerPriceRuleService.createPriceRule({
+      const payload = {
         courtId,
         name: name.trim(),
         daysOfWeek,
@@ -106,8 +138,15 @@ export function OwnerPriceRuleFormPage() {
         validTo: validTo || null,
         priority: Number(priority),
         status
-      });
-      showToast('Tạo quy tắc giá mới thành công!', 'success');
+      };
+
+      if (isEdit) {
+        await ownerPriceRuleService.updatePriceRule(id, payload);
+        showToast('Cập nhật quy tắc giá thành công!', 'success');
+      } else {
+        await ownerPriceRuleService.createPriceRule(payload);
+        showToast('Tạo quy tắc giá mới thành công!', 'success');
+      }
       navigate(ROUTES.OWNER_PRICING);
     } catch (err) {
       showToast(err?.message || 'Không thể lưu quy tắc giá.', 'error');
@@ -126,8 +165,8 @@ export function OwnerPriceRuleFormPage() {
     { num: 7, label: 'Chủ Nhật' }
   ];
 
-  if (loadingCourts) {
-    return <div style={{ textAlign: 'center', padding: '60px' }}>Đang nạp danh sách sân...</div>;
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: '60px' }}>Đang nạp thông tin quy tắc giá...</div>;
   }
 
   return (
@@ -149,7 +188,9 @@ export function OwnerPriceRuleFormPage() {
       </div>
 
       <div className="card" style={{ padding: '32px' }}>
-        <h1 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Tạo quy tắc giá sân</h1>
+        <h1 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>
+          {isEdit ? 'Chỉnh sửa quy tắc giá sân' : 'Tạo quy tắc giá sân'}
+        </h1>
         <p style={{ color: 'var(--sb-text-secondary)', fontSize: '0.9rem', marginBottom: '24px' }}>
           Khi khách đặt sân trùng khung giờ này, giá sẽ tự động được áp dụng theo quy tắc có mức ưu tiên cao hơn.
         </p>
@@ -339,7 +380,7 @@ export function OwnerPriceRuleFormPage() {
               style={{ width: '100%', marginTop: '12px' }}
               disabled={submitting}
             >
-              <Save size={16} /> {submitting ? 'Đang lưu...' : 'Lưu quy tắc giá'}
+              <Save size={16} /> {submitting ? 'Đang lưu...' : isEdit ? 'Lưu thay đổi quy tắc giá' : 'Lưu quy tắc giá'}
             </button>
           </form>
         )}

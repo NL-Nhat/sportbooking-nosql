@@ -77,5 +77,71 @@ export const ownerPriceRuleService = {
       body: JSON.stringify(payload)
     });
     return normalizePriceRule(response?.data);
+  },
+
+  /**
+   * Xem chi tiết một quy tắc giá
+   * GET /api/v1/owner/price-rules/{id}
+   */
+  getPriceRuleById: async (ruleId) => {
+    const response = await apiRequest(`/owner/price-rules/${encodeURIComponent(ruleId)}`, {
+      method: 'GET'
+    });
+    return normalizePriceRule(response?.data);
+  },
+
+  /**
+   * Cập nhật thông tin hoặc bật/tắt trạng thái quy tắc giá
+   * PATCH /api/v1/owner/price-rules/{id}
+   */
+  updatePriceRule: async (ruleId, payload) => {
+    const body = { ...payload };
+    if (body.name !== undefined) {
+      body.name = body.name.trim();
+    }
+    if (body.pricePerSlot !== undefined) {
+      body.pricePerSlot = Number(body.pricePerSlot);
+    }
+    if (body.priority !== undefined) {
+      body.priority = Number(body.priority) || 1;
+    }
+    if (body.daysOfWeek !== undefined) {
+      body.daysOfWeek = Array.isArray(body.daysOfWeek) ? body.daysOfWeek.map(Number) : [];
+    }
+    if (body.specificDates !== undefined) {
+      body.specificDates = Array.isArray(body.specificDates) ? body.specificDates : [];
+    }
+    if (body.validTo !== undefined) {
+      body.validTo = body.validTo && body.validTo.trim() ? body.validTo.trim() : null;
+    }
+
+    const response = await apiRequest(`/owner/price-rules/${encodeURIComponent(ruleId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body)
+    });
+    return normalizePriceRule(response?.data);
+  },
+
+  /**
+   * Đổi nhanh trạng thái ACTIVE / INACTIVE của quy tắc giá
+   * PATCH /api/v1/owner/price-rules/{id}
+   */
+  togglePriceRuleStatus: async (ruleId, status) => {
+    const response = await apiRequest(`/owner/price-rules/${encodeURIComponent(ruleId)}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status })
+    });
+    return normalizePriceRule(response?.data);
+  },
+
+  /**
+   * Xóa quy tắc giá
+   * DELETE /api/v1/owner/price-rules/{id}
+   */
+  deletePriceRule: async (ruleId) => {
+    const response = await apiRequest(`/owner/price-rules/${encodeURIComponent(ruleId)}`, {
+      method: 'DELETE'
+    });
+    return response;
   }
 };
